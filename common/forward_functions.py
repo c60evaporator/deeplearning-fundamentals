@@ -24,7 +24,7 @@ def forward_last_classification(Z_prev, W, b):
     Y = softmax(A)
     return Y
 
-def forward_last_classification(z_prev, W, b):
+def forward_last_regression(z_prev, W, b):
     """
     出力層の順伝播計算(回帰)
     """
