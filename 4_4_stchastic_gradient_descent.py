@@ -5,12 +5,11 @@ from sklearn.model_selection import train_test_split
 import copy
 from common.loss_funcions import cross_entropy_error, squared_error
 from common.forward_functions import forward_middle, forward_last_classification
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 class SGDNeuralNet:
     def __init__(self, X, T,
                  hidden_size, n_layers, loss_type,
+                 learning_rate, batch_size, n_iter,
                  weight_init_std=0.01):
         """
         パラメータ等を初期化
@@ -27,14 +26,23 @@ class SGDNeuralNet:
             層数 (隠れ層の数 - 1)
         loss_type : {'cross_entropy', 'squared_error'}
             損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
+        learning_rate : float
+            学習率
+        batch_size : int
+            ミニバッチのデータ数
+        n_iter : int
+            学習 (SGD)の繰り返し数
         weight_init_std : float
             初期パラメータ生成時の標準偏差
         """
         # 各種メンバ変数の入力
         input_size = X.shape[1]  # 説明変数の次元数(1層目の入力数)
         output_size = T.shape[1] if T.ndim == 2 else np.unique(T).size  # クラス数 (出力層のニューロン数)
-        self.loss_type = loss_type  # 損失関数の種類
         self.n_layers = n_layers  # 層数
+        self.loss_type = loss_type  # 損失関数の種類
+        self.learning_rate = learning_rate  # 学習率
+        self.batch_size = batch_size  # ミニバッチのデータ数
+        self.n_iter = n_iter  # 学習のイテレーション(繰り返し)数
         # パラメータを初期化
         self.params={'W': [],
                      'b': []}
@@ -93,7 +101,8 @@ class SGDNeuralNet:
         """
         ステップ1: ミニバッチの取得
         """
-        batch_mask = np.random.choice(train_size, batch_size)  # ランダムサンプリング
+        train_size = X.shape[0]  # サンプリング前のデータ数
+        batch_mask = np.random.choice(train_size, self.batch_size)  # ランダムサンプリング
         X_batch = X[batch_mask]
         T_batch = T[batch_mask]
         return X_batch, T_batch
@@ -168,10 +177,10 @@ class SGDNeuralNet:
         """
         # パラメータの更新
         for l in range(self.n_layers):
-            self.params['W'][l] -= learning_rate * grads['W'][l]
-            self.params['b'][l] -= learning_rate * grads['b'][l]
+            self.params['W'][l] -= self.learning_rate * grads['W'][l]
+            self.params['b'][l] -= self.learning_rate * grads['b'][l]
     
-    def fit(self, X, T, iters_num=1000):
+    def fit(self, X, T):
         """
         ステップ4: ステップ1-3を繰り返す
 
@@ -181,14 +190,12 @@ class SGDNeuralNet:
             入力データ
         T : numpy.ndarray 1D or 2D
             正解データ
-        iters_num : int
-            学習 (SGD)の繰り返し数
         """
         # Tが1次元ベクトルなら2次元に変換してOne-hot encodingする
         T = self._one_hot_encoding(T)
-        # iters_num繰り返す
+        # n_iter繰り返す
         self.train_loss_list = []
-        for i in range(iters_num):
+        for i in range(self.n_iter):
             # ステップ1: ミニバッチの取得
             X_batch, T_batch = self.select_minibatch(X, T)
             # ステップ2: 勾配の計算
@@ -196,7 +203,7 @@ class SGDNeuralNet:
             # ステップ3: パラメータの更新
             self.update_parameters(grads)
             # 学習経過の記録
-            loss = network._loss(X_batch, T_batch)
+            loss = self._loss(X_batch, T_batch)
             self.train_loss_list.append(loss)
         
     def accuracy(self, X_test, T_test):
@@ -212,6 +219,9 @@ class SGDNeuralNet:
         accuracy = np.sum(Y_test_label == T_test_label) / float(X_test.shape[0])
         return accuracy
 
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 # データ読込
 iris = sns.load_dataset("iris")
 iris = iris[iris['species'].isin(['versicolor', 'virginica'])]
@@ -225,7 +235,7 @@ T = iris['species'].to_numpy()
 X_train, X_test, T_train, T_test = train_test_split(X, T, shuffle=True, random_state=42)
 train_size = X_train.shape[0]
 # ハイパラ
-iters_num = 4000  # 学習(SGD)の繰り返し数
+n_iter = 4000  # 学習(SGD)の繰り返し数
 hidden_size = 2  # 隠れ層のニューロン数
 n_layers = 3  # 層数
 batch_size = 50  # バッチサイズ (サンプリング数)
@@ -234,26 +244,29 @@ weight_init_std=0.1
 
 # ニューラルネットワーク計算用クラス
 network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
-                        loss_type='cross_entropy', weight_init_std=weight_init_std)
+                       loss_type='cross_entropy', learning_rate=learning_rate,
+                       batch_size=batch_size, n_iter=n_iter,
+                       weight_init_std=weight_init_std)
 # SGDによる学習
-network.fit(X_train, T_train, iters_num)
+network.fit(X_train, T_train)
 # 精度評価
 print(f'{network.accuracy(X_test, T_test)}')
 # 学習履歴のプロット
-plt.plot(range(iters_num), network.train_loss_list)
+plt.plot(range(n_iter), network.train_loss_list)
 plt.show()
 
 # %% 決定境界のプロット
 from seaborn_analyzer import classplot
 import pandas as pd
 network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
-                        loss_type='cross_entropy', weight_init_std=weight_init_std)
+                        loss_type='cross_entropy', learning_rate=learning_rate,
+                       batch_size=batch_size, n_iter=n_iter, weight_init_std=weight_init_std)
 # 学習データをDataFrame化
 iris_train = pd.DataFrame(np.column_stack([X_train, T_train]),
                 columns=['petal_width', 'petal_length', 'sepal_width', 'species'])
 # 決定境界をプロット
 classplot.class_separator_plot(network, ['petal_width', 'petal_length', 'sepal_width'], 
-                        'species', iris, fit_params={'iters_num': iters_num})
+                        'species', iris)
 
 
 # %%
