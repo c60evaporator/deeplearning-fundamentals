@@ -6,7 +6,7 @@ from common.sgd_neuralnet import SGDNeuralNet
 
 # データ読込
 iris = sns.load_dataset("iris")
-iris = iris[iris['species'].isin(['versicolor', 'virginica'])]
+iris = iris[iris['species'].isin(['versicolor', 'virginica'])]  # 'versicolor', 'virginica'の2クラスに絞る
 
 # 説明変数
 X = iris[['petal_width', 'petal_length', 'sepal_width']].to_numpy()
@@ -32,12 +32,12 @@ network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_lay
 # SGDによる学習
 network.fit(X_train, T_train)
 # 精度評価
-print(f'{network.accuracy(X_test, T_test)}')
+print(f'Accuracy={network.accuracy(X_test, T_test)}')
 # 学習履歴のプロット
 plt.plot(range(n_iter), network.train_loss_list)
 plt.show()
 
-# %% 決定境界のプロット
+# %% seaborn-analyzerで決定境界プロット
 from seaborn_analyzer import classplot
 import pandas as pd
 import numpy as np

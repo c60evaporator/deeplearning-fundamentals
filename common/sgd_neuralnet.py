@@ -10,14 +10,14 @@ class SGDNeuralNet:
                  learning_rate, batch_size, n_iter,
                  weight_init_std=0.01):
         """
-        パラメータ等を初期化
+        ハイパーパラメータの読込＆パラメータの初期化
 
         Parameters
         ----------
         X : numpy.ndarray 2D
-            入力データ
+            入力データ (データの次元数確認のみに使用)
         T : numpy.ndarray 1D or 2D
-            正解データ
+            正解データ (データの次元数確認のみに使用)
         hidden_size : int
             隠れ層の1層あたりニューロン
         n_layers : int
@@ -33,7 +33,7 @@ class SGDNeuralNet:
         weight_init_std : float
             初期パラメータ生成時の標準偏差
         """
-        # 各種メンバ変数の入力
+        # 各種メンバ変数 (ハイパーパラメータ等)の入力
         input_size = X.shape[1]  # 説明変数の次元数(1層目の入力数)
         output_size = T.shape[1] if T.ndim == 2 else np.unique(T).size  # クラス数 (出力層のニューロン数)
         self.n_layers = n_layers  # 層数
@@ -80,12 +80,17 @@ class SGDNeuralNet:
         """
         順伝播を全て計算(One-hot encodingで出力)
         """
-        W1, W2, W3 = self.params['W'][0], self.params['W'][1], self.params['W'][2]
-        b1, b2, b3 = self.params['b'][0], self.params['b'][1], self.params['b'][2]
-        Z1 = forward_middle(X, W1, b1)
-        Z2 = forward_middle(Z1, W2, b2)
-        Z3 = forward_last_classification(Z2, W3, b3)
-        return Z3
+        Z_intermediate = X  # 入力値を
+        # 中間層(1〜n_layers-1層目)の順伝播
+        for l in range(self.n_layers-1):
+            W = self.params['W'][l]  # 重みパラメータ
+            b = self.params['b'][l]  # バイアスパラメータ
+            Z_intermediate = forward_middle(Z_intermediate, W, b)  # 中間層の計算
+        # 出力層の計算
+        W_final = self.params['W'][self.n_layers-1]
+        b_final = self.params['b'][self.n_layers-1]
+        Z_result = forward_last_classification(Z_intermediate, W_final, b_final)
+        return Z_result
     
     def predict(self, X):
         """
