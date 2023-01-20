@@ -198,7 +198,7 @@ class SGDNeuralNet:
         T = self._one_hot_encoding(T)
         # n_iter繰り返す
         self.train_loss_list = []
-        for i in range(self.n_iter):
+        for i_iter in range(self.n_iter):
             # ステップ1: ミニバッチの取得
             X_batch, T_batch = self.select_minibatch(X, T)
             # ステップ2: 勾配の計算
