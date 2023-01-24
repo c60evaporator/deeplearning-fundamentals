@@ -81,7 +81,7 @@ class SGDNeuralNet:
         順伝播を全て計算(One-hot encodingで出力)
         """
         Z_current = X  # 入力値を保持
-        Z_intermediate = []  # 中間出力の保持用
+        Z_intermediate = []  # 中間層出力の保持用
         # 中間層(1〜n_layers-1層目)の順伝播
         for l in range(self.n_layers-1):
             W = self.params['W'][l]  # 重みパラメータ
@@ -92,10 +92,10 @@ class SGDNeuralNet:
         W_final = self.params['W'][self.n_layers-1]
         b_final = self.params['b'][self.n_layers-1]
         Z_result = forward_last_classification(Z_current, W_final, b_final)
-        # 中間出力も出力する場合
+        # 中間層出力も出力する場合
         if output_intermediate:
             return Z_result, Z_intermediate
-        # 中間出力を出力しない場合
+        # 中間層出力を出力しない場合
         else:
             return Z_result
     
