@@ -76,21 +76,28 @@ class SGDNeuralNet:
         T_cat = np.vectorize(lambda x: self.one_hot_encoder_.categories_[0][x])(T_label)
         return T_cat
     
-    def _predict_onehot(self, X):
+    def _predict_onehot(self, X, output_intermediate=False):
         """
         順伝播を全て計算(One-hot encodingで出力)
         """
-        Z_intermediate = X  # 入力値を
+        Z_current = X  # 入力値を保持
+        Z_intermediate = []  # 中間出力の保持用
         # 中間層(1〜n_layers-1層目)の順伝播
         for l in range(self.n_layers-1):
             W = self.params['W'][l]  # 重みパラメータ
             b = self.params['b'][l]  # バイアスパラメータ
-            Z_intermediate = forward_middle(Z_intermediate, W, b)  # 中間層の計算
-        # 出力層の計算
+            Z_current = forward_middle(Z_current, W, b)  # 中間層の計算
+            Z_intermediate.append(Z_current)  # 中間層出力を保持 (5章の逆伝播法で使用)
+        # 出力層の順伝播
         W_final = self.params['W'][self.n_layers-1]
         b_final = self.params['b'][self.n_layers-1]
-        Z_result = forward_last_classification(Z_intermediate, W_final, b_final)
-        return Z_result
+        Z_result = forward_last_classification(Z_current, W_final, b_final)
+        # 中間出力も出力する場合
+        if output_intermediate:
+            return Z_result, Z_intermediate
+        # 中間出力を出力しない場合
+        else:
+            return Z_result
     
     def predict(self, X):
         """
