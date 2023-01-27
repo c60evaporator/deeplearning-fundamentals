@@ -13,4 +13,5 @@ def squared_error(Y, T):
     2乗和誤差を計算
     """
     # 2乗和誤差を計算して返す
-    return 1.0/2.0 * np.sum(np.square(Y - T))
+    batch_size = Y.shape[0]
+    return 1.0/2.0 * np.sum(np.square(Y - T)) / batch_size
