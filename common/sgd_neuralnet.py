@@ -89,7 +89,8 @@ class SGDNeuralNet:
         for l in range(self.n_layers-1):
             W = self.params['W'][l]  # 重みパラメータ
             b = self.params['b'][l]  # バイアスパラメータ
-            Z_current = forward_middle(Z_current, W, b, activation_function=self.activation_function)  # 中間層の計算
+            Z_current = forward_middle(Z_current, W, b, 
+                activation_function=self.activation_function)  # 中間層の計算
         # 出力層の順伝播
         W_final = self.params['W'][self.n_layers-1]
         b_final = self.params['b'][self.n_layers-1]
