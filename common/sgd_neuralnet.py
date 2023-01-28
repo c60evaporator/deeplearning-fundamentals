@@ -6,8 +6,9 @@ from common.forward_functions import forward_middle, forward_last_classification
 
 class SGDNeuralNet:
     def __init__(self, X, T,
-                 hidden_size, n_layers, loss_type,
+                 hidden_size, n_layers, 
                  learning_rate, batch_size, n_iter,
+                 loss_type, activation_function,
                  weight_init_std=0.01):
         """
         ハイパーパラメータの読込＆パラメータの初期化
@@ -22,14 +23,16 @@ class SGDNeuralNet:
             隠れ層の1層あたりニューロン
         n_layers : int
             層数 (隠れ層の数 - 1)
-        loss_type : {'cross_entropy', 'squared_error'}
-            損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
         learning_rate : float
             学習率
         batch_size : int
             ミニバッチのデータ数
         n_iter : int
             学習 (SGD)の繰り返し数
+        loss_type : {'cross_entropy', 'squared_error'}
+            損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
+        activation_function : {'sigumoid', 'relu'}
+            中間層活性化関数の種類 ('sigmoid': シグモイド関数, 'relu': ReLU関数)
         weight_init_std : float
             初期パラメータ生成時の標準偏差
         """
@@ -37,10 +40,11 @@ class SGDNeuralNet:
         input_size = X.shape[1]  # 説明変数の次元数(1層目の入力数)
         output_size = T.shape[1] if T.ndim == 2 else np.unique(T).size  # クラス数 (出力層のニューロン数)
         self.n_layers = n_layers  # 層数
-        self.loss_type = loss_type  # 損失関数の種類
         self.learning_rate = learning_rate  # 学習率
         self.batch_size = batch_size  # ミニバッチのデータ数
         self.n_iter = n_iter  # 学習のイテレーション(繰り返し)数
+        self.loss_type = loss_type  # 損失関数の種類
+        self.activation_function = activation_function  # 中間層活性化関数の種類
         # パラメータを初期化
         self.params={'W': [],
                      'b': []}
@@ -85,7 +89,7 @@ class SGDNeuralNet:
         for l in range(self.n_layers-1):
             W = self.params['W'][l]  # 重みパラメータ
             b = self.params['b'][l]  # バイアスパラメータ
-            Z_current = forward_middle(Z_current, W, b)  # 中間層の計算
+            Z_current = forward_middle(Z_current, W, b, activation_function=self.activation_function)  # 中間層の計算
         # 出力層の順伝播
         W_final = self.params['W'][self.n_layers-1]
         b_final = self.params['b'][self.n_layers-1]

@@ -26,8 +26,8 @@ weight_init_std=0.1
 
 # ニューラルネットワーク計算用クラス
 network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
-                       loss_type='cross_entropy', learning_rate=learning_rate,
-                       batch_size=batch_size, n_iter=n_iter,
+                       learning_rate=learning_rate, batch_size=batch_size, n_iter=n_iter, 
+                       loss_type='cross_entropy', activation_function='sigmoid',
                        weight_init_std=weight_init_std)
 # SGDによる学習
 network.fit(X_train, T_train)
@@ -43,8 +43,9 @@ import pandas as pd
 import numpy as np
 
 network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
-                        loss_type='cross_entropy', learning_rate=learning_rate,
-                       batch_size=batch_size, n_iter=n_iter, weight_init_std=weight_init_std)
+                       learning_rate=learning_rate, batch_size=batch_size, n_iter=n_iter, 
+                       loss_type='cross_entropy', activation_function='sigmoid',
+                       weight_init_std=weight_init_std)
 # 学習データをDataFrame化
 iris_train = pd.DataFrame(np.column_stack([X_train, T_train]),
                 columns=['petal_width', 'petal_length', 'sepal_width', 'species'])
