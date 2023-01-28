@@ -31,7 +31,7 @@ class SGDNeuralNet:
             学習 (SGD)の繰り返し数
         loss_type : {'cross_entropy', 'squared_error'}
             損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
-        activation_function : {'sigumoid', 'relu'}
+        activation_function : {'sigmoid', 'relu'}
             中間層活性化関数の種類 ('sigmoid': シグモイド関数, 'relu': ReLU関数)
         weight_init_std : float
             初期パラメータ生成時の標準偏差
@@ -45,6 +45,11 @@ class SGDNeuralNet:
         self.n_iter = n_iter  # 学習のイテレーション(繰り返し)数
         self.loss_type = loss_type  # 損失関数の種類
         self.activation_function = activation_function  # 中間層活性化関数の種類
+        # 損失関数と活性化関数が正しく入力されているか判定
+        if loss_type not in ['cross_entropy', 'squared_error']:
+            raise Exception('the `loss_type` argument should be "cross_entropy" or "squared_error"')
+        if activation_function not in ['sigmoid', 'relu']:
+            raise Exception('the `activation_function` argument should be "sigmoid" or "relu"')
         # パラメータを初期化
         self.params={'W': [],
                      'b': []}
