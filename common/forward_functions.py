@@ -1,7 +1,7 @@
 import numpy as np
 from common.activation_functions import softmax, identity, sigmoid, relu, step_function
 
-def forward_middle(Z_prev, W, b, activation_function='sigmoid'):
+def forward_middle(Z_prev, W, b, activation_function='sigmoid', output_A=False):
     """
     中間層の順伝播計算
     """
@@ -14,7 +14,12 @@ def forward_middle(Z_prev, W, b, activation_function='sigmoid'):
         Z = step_function(A)
     else:
         raise Exception('The activation_function should be "sigmoid", "relu", or "step"')
-    return Z
+    # Zだけでなく中間結果Aも一緒に出力する場合 (5章の誤差逆伝播法で使用)
+    if output_A:
+        return Z, A
+    # Zのみ出力する場合
+    else:
+        return Z
 
 def forward_last_classification(Z_prev, W, b):
     """
