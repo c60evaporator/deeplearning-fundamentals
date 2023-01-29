@@ -1,9 +1,8 @@
-from common.backward_functions import softmax_loss_backward, affine_backward_bias, affine_backward_weight, affine_backward_zprev, relu_backward, sigmoid_backward
-
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from common.loss_funcions import cross_entropy_error, squared_error
 from common.forward_functions import forward_middle, forward_last_classification
+from common.backward_functions import softmax_loss_backward, affine_backward_bias, affine_backward_weight, affine_backward_zprev, relu_backward, sigmoid_backward
 
 class BackpropNeuralNet:
     def __init__(self, X, T,
@@ -38,29 +37,37 @@ class BackpropNeuralNet:
             重み初期値生成時の標準偏差
         """
         # 各種メンバ変数 (ハイパーパラメータ等)の入力
-        input_size = X.shape[1]  # 説明変数の次元数(1層目の入力数)
-        output_size = T.shape[1] if T.ndim == 2 else np.unique(T).size  # クラス数 (出力層のニューロン数)
+        self.input_size = X.shape[1]  # 説明変数の次元数(1層目の入力数)
+        self.output_size = T.shape[1] if T.ndim == 2 else np.unique(T).size  # クラス数 (出力層のニューロン数)
+        self.hidden_size = hidden_size  # 隠れ層の1層あたりニューロン
         self.n_layers = n_layers  # 層数
         self.learning_rate = learning_rate  # 学習率
         self.batch_size = batch_size  # ミニバッチのデータ数
         self.n_iter = n_iter  # 学習のイテレーション(繰り返し)数
         self.loss_type = loss_type  # 損失関数の種類
         self.activation_function = activation_function  # 中間層活性化関数の種類
+        self.weight_init_std = weight_init_std  # 重み初期値生成時の標準偏差
         # 損失関数と活性化関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
             raise Exception('the `loss_type` argument should be "cross_entropy" or "squared_error"')
         if activation_function not in ['sigmoid', 'relu']:
             raise Exception('the `activation_function` argument should be "sigmoid" or "relu"')
         # パラメータを初期化
+        self._initialize_parameters()
+        
+    def _initialize_parameters(self):
+        """
+        パラメータを初期化
+        """
         self.params={'W': [],
                      'b': []}
-        self.params['W'].append(weight_init_std * \
-                            np.random.randn(input_size, hidden_size))  # 1層目の重みパラメータ
-        for l in range(n_layers-1):
-            self.params['b'].append(np.zeros(hidden_size))  # l+1層目のバイアスパラメータ
-            self.params['W'].append(weight_init_std * \
-                            np.random.randn(hidden_size, hidden_size)) # l+2層目の重みパラメータ
-        self.params['b'].append(np.zeros(output_size))  # 最終層のバイアスパラメータ
+        self.params['W'].append(self.weight_init_std * \
+                            np.random.randn(self.input_size, self.hidden_size))  # 1層目の重みパラメータ
+        for l in range(self.n_layers-1):
+            self.params['b'].append(np.zeros(self.hidden_size))  # l+1層目のバイアスパラメータ
+            self.params['W'].append(self.weight_init_std * \
+                            np.random.randn(self.hidden_size, self.hidden_size)) # l+2層目の重みパラメータ
+        self.params['b'].append(np.zeros(self.output_size))  # 最終層のバイアスパラメータ
 
     def _one_hot_encoding(self, T):
         """
@@ -206,6 +213,8 @@ class BackpropNeuralNet:
         T : numpy.ndarray 1D or 2D
             正解データ
         """
+        # パラメータを初期化
+        self._initialize_parameters()
         # Tが1次元ベクトルなら2次元に変換してOne-hot encodingする
         T = self._one_hot_encoding(T)
         # n_iter繰り返す
