@@ -17,7 +17,7 @@ T = iris['species'].to_numpy()
 # 学習データとテストデータ分割
 X_train, X_test, T_train, T_test = train_test_split(X, T, shuffle=True, random_state=42)
 train_size = X_train.shape[0]
-# ハイパラ
+# ハイパーパラメータ
 n_iter = 4000  # 学習(SGD)の繰り返し数
 hidden_size = 2  # 隠れ層のニューロン数
 n_layers = 3  # 層数
