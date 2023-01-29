@@ -35,7 +35,7 @@ class BackpropNeuralNet:
         activation_function : {'sigmoid', 'relu'}
             中間層活性化関数の種類 ('sigmoid': シグモイド関数, 'relu': ReLU関数)
         weight_init_std : float
-            初期パラメータ生成時の標準偏差
+            重み初期値生成時の標準偏差
         """
         # 各種メンバ変数 (ハイパーパラメータ等)の入力
         input_size = X.shape[1]  # 説明変数の次元数(1層目の入力数)

@@ -23,7 +23,7 @@ hidden_size = 2  # 隠れ層のニューロン数
 n_layers = 3  # 層数
 batch_size = 50  # バッチサイズ (サンプリング数)
 learning_rate = 1.0  # 学習率
-weight_init_std=0.1
+weight_init_std=0.1  # 重み初期値生成時の標準偏差
 
 # ニューラルネットワーク計算用クラス (誤差逆伝播法バージョン)
 network = BackpropNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
