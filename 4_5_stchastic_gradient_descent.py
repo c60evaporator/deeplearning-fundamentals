@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from common.sgd_neuralnet import SGDNeuralNet
+import time
 
 # データ読込
 iris = sns.load_dataset("iris")
@@ -29,8 +30,10 @@ network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_lay
                        learning_rate=learning_rate, batch_size=batch_size, n_iter=n_iter, 
                        loss_type='cross_entropy', activation_function='sigmoid',
                        weight_init_std=weight_init_std)
+start = time.time()  # 時間計測用
 # SGDによる学習
 network.fit(X_train, T_train)
+print(f'Training time={time.time() - start}sec')  # 学習時間を表示
 # 精度評価
 print(f'Accuracy={network.accuracy(X_test, T_test)}')
 # 学習履歴のプロット
