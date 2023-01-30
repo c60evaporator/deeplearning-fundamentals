@@ -61,12 +61,17 @@ class BackpropNeuralNet:
         """
         self.params={'W': [],
                      'b': []}
+        # 重みパラメータ
         self.params['W'].append(self.weight_init_std * \
                             np.random.randn(self.input_size, self.hidden_size))  # 1層目の重みパラメータ
-        for l in range(self.n_layers-1):
-            self.params['b'].append(np.zeros(self.hidden_size))  # l+1層目のバイアスパラメータ
+        for l in range(self.n_layers-2):
             self.params['W'].append(self.weight_init_std * \
-                            np.random.randn(self.hidden_size, self.hidden_size)) # l+2層目の重みパラメータ
+                            np.random.randn(self.hidden_size, self.hidden_size)) # 中間層の重みパラメータ
+        self.params['W'].append(self.weight_init_std * \
+                            np.random.randn(self.hidden_size, self.output_size)) # 出力層の重みパラメータ
+        # バイアスパラメータ
+        for l in range(self.n_layers-1):
+            self.params['b'].append(np.zeros(self.hidden_size))  # 中間層のバイアスパラメータ
         self.params['b'].append(np.zeros(self.output_size))  # 最終層のバイアスパラメータ
 
     def _one_hot_encoding(self, T):
