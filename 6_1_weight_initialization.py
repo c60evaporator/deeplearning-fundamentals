@@ -1,4 +1,4 @@
-#%%
+#%% 重み初期値生成時の標準偏差を変えて中間層の出力分布をプロット
 import numpy as np
 import matplotlib.pyplot as plt
 from common.activation_functions import sigmoid, relu
@@ -54,7 +54,7 @@ for activation_function in ['sigmoid', 'relu']:
             ax.hist(a.flatten(), 30, range=(0,1))
     plt.show()
 
-# %% 比較
+# %% 重み初期値の標準偏差による収束速度比較
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
