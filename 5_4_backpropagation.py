@@ -2,7 +2,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from common.backprop_neuralnet import BackpropNeuralNet
+from models.backprop_neuralnet import BackpropNeuralNet
 import time
 
 # データ読込

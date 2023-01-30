@@ -2,7 +2,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from common.sgd_neuralnet import SGDNeuralNet
+from models.sgd_neuralnet import SGDNeuralNet
 import time
 
 # データ読込
