@@ -10,6 +10,7 @@ class BackpropAdvancedNet:
                  learning_rate, batch_size, n_iter,
                  loss_type, activation_function,
                  solver='sgd', momentum=0.9,
+                 beta_1=0.9, beta_2=0.999,
                  weight_init_std='auto'):
         """
         ハイパーパラメータの読込＆パラメータの初期化
@@ -37,7 +38,11 @@ class BackpropAdvancedNet:
         solver : {'sgd', 'momentum', 'adagrad', 'rmsprop', 'adam'}
             最適化アルゴリズムの種類 ('sgd': SGD, 'momentum': モーメンタム, 'adagrad': AdaGrad, 'rmsprop': 'RMSProp', 'adam': Adam)
         momentum : float
-            勾配移動平均の減衰率ハイパーパラメータ (solver = 'momentum' or 'adam'の時のみ有効)
+            勾配移動平均の減衰率ハイパーパラメータ (solver = 'momentum'の時のみ有効)
+        beta_1 : float
+            勾配移動平均の減衰率ハイパーパラメータ (solver = 'adam'の時のみ有効)
+        beta_2 : float
+            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop', or 'adam'の時のみ有効)
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
         """
@@ -52,7 +57,9 @@ class BackpropAdvancedNet:
         self.loss_type = loss_type  # 損失関数の種類
         self.activation_function = activation_function  # 中間層活性化関数の種類
         self.solver = solver  # 最適化アルゴリズムの種類
-        self.momentum = momentum  # 最適化アルゴリズムで使用するハイパーパラメータ
+        self.momentum = momentum  # 勾配移動平均の減衰率ハイパーパラメータ (モーメンタムで使用)
+        self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)
+        self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
         self.weight_init_std = weight_init_std  # 重み初期値生成時の標準偏差
         # 損失関数と活性化関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
@@ -230,7 +237,7 @@ class BackpropAdvancedNet:
             # self.paramsと同形状のndarrayのリストとして初期化 (全てゼロ埋め)
             self.momentum_v = {'W': [np.zeros_like(self.params['W'][l]) for l in range(self.n_layers)],
                                'b': [np.zeros_like(self.params['b'][l]) for l in range(self.n_layers)]}
-        # self.paramsと同形状のリストとして初期化 (最適化アルゴリズムがAdaGrad, RMSProp, or Adamの時使用)
+        # 過去の勾配2乗和保持用変数adagrad_h  (最適化アルゴリズムがAdaGrad, RMSProp, or Adamの時使用)
         if self.solver in ['adagrad', 'rmsprop', 'adam']:
             # self.paramsと同形状のndarrayのリストとして初期化 (全てゼロ埋め)
             self.adagrad_h = {'W': [np.zeros_like(self.params['W'][l]) for l in range(self.n_layers)],
@@ -252,6 +259,42 @@ class BackpropAdvancedNet:
             # パラメータ更新量 = momentum_v
             self.params['W'][l] += self.momentum_v['W'][l]
             self.params['b'][l] += self.momentum_v['b'][l]
+
+    def _update_parameters_adagrad(self, grads):
+        """AdaGradによるパラメータ更新"""
+        epsilon = 1e-8
+        for l in range(self.n_layers):
+            # 過去の勾配2乗和adagrad_h = 更新前のadagrad_h + 勾配gradsの2乗
+            self.adagrad_h['W'][l] = self.adagrad_h['W'][l] + grads['W'][l] ** 2
+            self.adagrad_h['b'][l] = self.adagrad_h['b'][l] + grads['b'][l] ** 2
+            # パラメータ更新量 = -学習率learning_rate * 勾配grads / (sqrt(adagrad_h)+epsilon)
+            self.params['W'][l] -= self.learning_rate * grads['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + epsilon)
+            self.params['b'][l] -= self.learning_rate * grads['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + epsilon)
+
+    def _update_parameters_rmsprop(self, grads):
+        """RMSpropによるパラメータ更新"""
+        epsilon = 1e-8
+        for l in range(self.n_layers):
+            # 過去の勾配2乗和adagrad_h = beta_2 * 更新前のadagrad_h + (1 - beta_2) * 勾配gradsの2乗
+            self.adagrad_h['W'][l] = self.beta_2 * self.adagrad_h['W'][l] + (1 - self.beta_2) * grads['W'][l] ** 2
+            self.adagrad_h['b'][l] = self.beta_2 * self.adagrad_h['b'][l] + (1 - self.beta_2) * grads['b'][l] ** 2
+            # パラメータ更新量 = 学習率learning_rate * 勾配grads / (sqrt(adagrad_h)+epsilon)
+            self.params['W'][l] -= self.learning_rate * grads['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + epsilon)
+            self.params['b'][l] -= self.learning_rate * grads['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + epsilon)
+
+    def _update_parameters_adam(self, grads):
+        """Adamによるパラメータ更新"""
+        epsilon = 1e-8
+        for l in range(self.n_layers):
+            # 勾配移動平均momentum_v = beta_1 * 更新前のmomentum_v - (1 - beta_1) * 勾配grads
+            self.momentum_v['W'][l] = self.beta_1 * self.momentum_v['W'][l] + (1 - self.beta_1) * grads['W'][l]
+            self.momentum_v['b'][l] = self.beta_1 * self.momentum_v['b'][l] + (1 - self.beta_1) * grads['b'][l]
+            # 過去の勾配2乗和adagrad_h = beta_2 * 更新前のadagrad_h + (1 - beta_2) * 勾配gradsの2乗
+            self.adagrad_h['W'][l] = self.beta_2 * self.adagrad_h['W'][l] + (1 - self.beta_2) * grads['W'][l] ** 2
+            self.adagrad_h['b'][l] = self.beta_2 * self.adagrad_h['b'][l] + (1 - self.beta_2) * grads['b'][l] ** 2
+            # パラメータ更新量 = 学習率learning_rate * momentum_v / (sqrt(adagrad_h)+epsilon)
+            self.params['W'][l] -= self.learning_rate * self.momentum_v['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + epsilon)
+            self.params['b'][l] -= self.learning_rate * self.momentum_v['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + epsilon)
     
     def update_parameters(self, grads):
         """
@@ -263,6 +306,15 @@ class BackpropAdvancedNet:
         # 最適化アルゴリズムがモーメンタムの時
         elif self.solver == 'momentum':
             self._update_parameters_momentum(grads)
+        # 最適化アルゴリズムがAdaGradの時
+        elif self.solver == 'adagrad':
+            self._update_parameters_adagrad(grads)
+        # 最適化アルゴリズムがRMSpropの時
+        elif self.solver == 'rmsprop':
+            self._update_parameters_rmsprop(grads)
+        # 最適化アルゴリズムがAdamの時
+        elif self.solver == 'adam':
+            self._update_parameters_adam(grads)
 
     
     def fit(self, X, T):
