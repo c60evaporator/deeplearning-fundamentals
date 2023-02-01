@@ -42,19 +42,14 @@ plt.show()
 
 # %% seaborn-analyzerで決定境界プロット
 from seaborn_analyzer import classplot
-import pandas as pd
-import numpy as np
 
 network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
                        learning_rate=learning_rate, batch_size=batch_size, n_iter=n_iter, 
                        loss_type='cross_entropy', activation_function='sigmoid',
                        weight_init_std=weight_init_std)
-# 学習データをDataFrame化
-iris_train = pd.DataFrame(np.column_stack([X_train, T_train]),
-                columns=['petal_width', 'petal_length', 'sepal_width', 'species'])
 # 決定境界をプロット
-classplot.class_separator_plot(network, ['petal_width', 'petal_length', 'sepal_width'], 
-                        'species', iris)
+classplot.class_separator_plot(network, x=X_train, y=T_train, 
+                               x_colnames=['petal_width', 'petal_length', 'sepal_width'])
 
 
 # %%
