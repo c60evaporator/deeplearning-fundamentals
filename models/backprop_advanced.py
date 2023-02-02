@@ -10,7 +10,7 @@ class BackpropAdvancedNet:
                  learning_rate, batch_size, n_iter,
                  loss_type, activation_function,
                  solver='sgd', momentum=0.9,
-                 beta_1=0.9, beta_2=0.999,
+                 beta_1=0.9, beta_2=0.999, epsilon=1e-8,
                  weight_init_std='auto'):
         """
         ハイパーパラメータの読込＆パラメータの初期化
@@ -42,7 +42,9 @@ class BackpropAdvancedNet:
         beta_1 : float
             勾配移動平均の減衰率ハイパーパラメータ (solver = 'adam'の時のみ有効)
         beta_2 : float
-            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop', or 'adam'の時のみ有効)
+            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop' or 'adam'の時のみ有効)
+        epsilon : float
+            ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', or 'adam'の時のみ有効)
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
         """
@@ -60,6 +62,7 @@ class BackpropAdvancedNet:
         self.momentum = momentum  # 勾配移動平均の減衰率ハイパーパラメータ (モーメンタムで使用)
         self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)
         self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
+        self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
         self.weight_init_std = weight_init_std  # 重み初期値生成時の標準偏差
         # 損失関数と活性化関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
@@ -262,29 +265,26 @@ class BackpropAdvancedNet:
 
     def _update_parameters_adagrad(self, grads):
         """AdaGradによるパラメータ更新"""
-        epsilon = 1e-8
         for l in range(self.n_layers):
             # 過去の勾配2乗和adagrad_h = 更新前のadagrad_h + 勾配gradsの2乗
             self.adagrad_h['W'][l] = self.adagrad_h['W'][l] + grads['W'][l] ** 2
             self.adagrad_h['b'][l] = self.adagrad_h['b'][l] + grads['b'][l] ** 2
             # パラメータ更新量 = -学習率learning_rate * 勾配grads / (sqrt(adagrad_h)+epsilon)
-            self.params['W'][l] -= self.learning_rate * grads['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + epsilon)
-            self.params['b'][l] -= self.learning_rate * grads['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + epsilon)
+            self.params['W'][l] -= self.learning_rate * grads['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + self.epsilon)
+            self.params['b'][l] -= self.learning_rate * grads['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + self.epsilon)
 
     def _update_parameters_rmsprop(self, grads):
         """RMSpropによるパラメータ更新"""
-        epsilon = 1e-8
         for l in range(self.n_layers):
             # 過去の勾配2乗和adagrad_h = beta_2 * 更新前のadagrad_h + (1 - beta_2) * 勾配gradsの2乗
             self.adagrad_h['W'][l] = self.beta_2 * self.adagrad_h['W'][l] + (1 - self.beta_2) * grads['W'][l] ** 2
             self.adagrad_h['b'][l] = self.beta_2 * self.adagrad_h['b'][l] + (1 - self.beta_2) * grads['b'][l] ** 2
             # パラメータ更新量 = 学習率learning_rate * 勾配grads / (sqrt(adagrad_h)+epsilon)
-            self.params['W'][l] -= self.learning_rate * grads['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + epsilon)
-            self.params['b'][l] -= self.learning_rate * grads['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + epsilon)
+            self.params['W'][l] -= self.learning_rate * grads['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + self.epsilon)
+            self.params['b'][l] -= self.learning_rate * grads['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + self.epsilon)
 
     def _update_parameters_adam(self, grads):
         """Adamによるパラメータ更新"""
-        epsilon = 1e-8
         for l in range(self.n_layers):
             # 勾配移動平均momentum_v = beta_1 * 更新前のmomentum_v - (1 - beta_1) * 勾配grads
             self.momentum_v['W'][l] = self.beta_1 * self.momentum_v['W'][l] + (1 - self.beta_1) * grads['W'][l]
@@ -293,8 +293,8 @@ class BackpropAdvancedNet:
             self.adagrad_h['W'][l] = self.beta_2 * self.adagrad_h['W'][l] + (1 - self.beta_2) * grads['W'][l] ** 2
             self.adagrad_h['b'][l] = self.beta_2 * self.adagrad_h['b'][l] + (1 - self.beta_2) * grads['b'][l] ** 2
             # パラメータ更新量 = 学習率learning_rate * momentum_v / (sqrt(adagrad_h)+epsilon)
-            self.params['W'][l] -= self.learning_rate * self.momentum_v['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + epsilon)
-            self.params['b'][l] -= self.learning_rate * self.momentum_v['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + epsilon)
+            self.params['W'][l] -= self.learning_rate * self.momentum_v['W'][l] / (np.sqrt(self.adagrad_h['W'][l]) + self.epsilon)
+            self.params['b'][l] -= self.learning_rate * self.momentum_v['b'][l] / (np.sqrt(self.adagrad_h['b'][l]) + self.epsilon)
     
     def update_parameters(self, grads):
         """
