@@ -85,7 +85,7 @@ class BackpropAdvancedNet:
         for l in range(1, self.n_layers-1):
             self.params[l]['W'] = calc_weight_init_std(self.hidden_size, self.weight_init_std, self.activation_function) \
                             * np.random.randn(self.hidden_size, self.hidden_size) # 中間層の重みパラメータ
-        self.params[self.n_layers-1]['W'] = calc_weight_init_std(self.hidden_size, self.weight_init_std, self.activation_function) \
+        self.params[self.n_layers-1]['W'] = calc_weight_init_std(self.hidden_size, self.weight_init_std, 'softmax') \
                             * np.random.randn(self.hidden_size, self.output_size) # 出力層の重みパラメータ
         # バイアスパラメータ
         for l in range(self.n_layers-1):

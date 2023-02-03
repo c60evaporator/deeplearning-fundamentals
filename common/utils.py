@@ -6,8 +6,8 @@ def calc_weight_init_std(prev_node_num, weight_init_std, activation_function):
         """
         # 自動計算する場合
         if weight_init_std == 'auto':
-            # 活性化関数がSigmoidの時、Xavierの初期値を使用
-            if activation_function == 'sigmoid':
+            # 活性化関数がSigmoid or Softmaxの時、Xavierの初期値を使用
+            if activation_function in ['sigmoid', 'softmax']:
                 return np.sqrt(1.0 / prev_node_num)
             # 活性化関数がSigmoidの時、Xavierの初期値を使用
             elif activation_function == 'relu':
