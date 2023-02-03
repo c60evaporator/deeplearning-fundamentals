@@ -59,20 +59,20 @@ class BackpropNeuralNet:
         """
         パラメータを初期化
         """
-        self.params={'W': [],
-                     'b': []}
+        # パラメータ格納用に空の辞書のリストを準備
+        self.params = [{} for l in range(self.n_layers)]
         # 重みパラメータ
-        self.params['W'].append(self.weight_init_std * \
-                            np.random.randn(self.input_size, self.hidden_size))  # 1層目の重みパラメータ
-        for l in range(self.n_layers-2):
-            self.params['W'].append(self.weight_init_std * \
-                            np.random.randn(self.hidden_size, self.hidden_size)) # 中間層の重みパラメータ
-        self.params['W'].append(self.weight_init_std * \
-                            np.random.randn(self.hidden_size, self.output_size)) # 出力層の重みパラメータ
+        self.params[0]['W'] = self.weight_init_std \
+                            * np.random.randn(self.input_size, self.hidden_size)  # 1層目の重みパラメータ
+        for l in range(1, self.n_layers-1):
+            self.params[l]['W'] = self.weight_init_std \
+                            * np.random.randn(self.hidden_size, self.hidden_size) # 中間層の重みパラメータ
+        self.params[self.n_layers-1]['W'] = self.weight_init_std \
+                            * np.random.randn(self.hidden_size, self.output_size) # 出力層の重みパラメータ
         # バイアスパラメータ
         for l in range(self.n_layers-1):
-            self.params['b'].append(np.zeros(self.hidden_size))  # 中間層のバイアスパラメータ
-        self.params['b'].append(np.zeros(self.output_size))  # 最終層のバイアスパラメータ
+            self.params[l]['b'] = np.zeros(self.hidden_size)  # 中間層のバイアスパラメータ
+        self.params[self.n_layers-1]['b'] = np.zeros(self.output_size)  # 最終層のバイアスパラメータ
 
     def _one_hot_encoding(self, T):
         """
@@ -107,15 +107,15 @@ class BackpropNeuralNet:
         A_intermediate = []  # 中間層の途中結果Aの保持用 (5章の誤差逆伝播法で使用)
         # 中間層(1〜n_layers-1層目)の順伝播
         for l in range(self.n_layers-1):
-            W = self.params['W'][l]  # 重みパラメータ
-            b = self.params['b'][l]  # バイアスパラメータ
+            W = self.params[l]['W']  # 重みパラメータ
+            b = self.params[l]['b']  # バイアスパラメータ
             Z_current, A_current = forward_middle(Z_current, W, b, 
                 activation_function=self.activation_function, output_A=True)  # 中間層の計算
             Z_intermediate.append(Z_current)  # 中間層出力を保持 (5章の誤差逆伝播法で使用)
             A_intermediate.append(A_current)  # 中間層の途中結果Aを保持 (5章の誤差逆伝播法で使用)
         # 出力層の順伝播
-        W_final = self.params['W'][self.n_layers-1]
-        b_final = self.params['b'][self.n_layers-1]
+        W_final = self.params[self.n_layers-1]['W']
+        b_final = self.params[self.n_layers-1]['b']
         Z_result = forward_last_classification(Z_current, W_final, b_final)
         # 中間層出力も出力する場合 (5章の誤差逆伝播法で使用)
         if output_intermediate:
@@ -160,19 +160,18 @@ class BackpropNeuralNet:
         """
         # 順伝播 (中間層出力Zおよび中間層の中間結果Aも保持する)
         Y, Z_intermediate, A_intermediate = self._predict_onehot(X, output_intermediate=True)
-        # 逆伝播結果格納用 (0埋めしておく)
-        grads = {'b': [0.0] * self.n_layers,
-                 'W': [0.0] * self.n_layers}
+        # 逆伝播結果格納用 (空の辞書のリスト)
+        grads = [{} for l in range(self.n_layers)]
         ###### 出力層の逆伝播 ######
         # Softmax-with-Lossレイヤ
         dA = softmax_loss_backward(Y, T)
         # Affineレイヤ
         db = affine_backward_bias(dA)  # バイアスパラメータbの偏微分
         dW = affine_backward_weight(dA, Z_intermediate[self.n_layers-2])  # 重みパラメータWの偏微分 (前層出力Z_prevを入力)
-        dZ_prev = affine_backward_zprev(dA, self.params['W'][self.n_layers-1])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
+        dZ_prev = affine_backward_zprev(dA, self.params[self.n_layers-1]['W'])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
-        grads['b'][self.n_layers-1] = db
-        grads['W'][self.n_layers-1] = dW
+        grads[self.n_layers-1]['b'] = db
+        grads[self.n_layers-1]['W'] = dW
         ###### 中間層の逆伝播 (下流から順番にループ) ######
         for l in range(self.n_layers-2, -1, -1):
             # 当該層の出力偏微分dZを更新
@@ -188,13 +187,13 @@ class BackpropNeuralNet:
             # 初層以外の場合
             if l > 0:
                 dW = affine_backward_weight(dA, Z_intermediate[l-1])  # 重みパラメータWの偏微分 (前層出力Z_prevを入力)
-                dZ_prev = affine_backward_zprev(dA, self.params['W'][l])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
+                dZ_prev = affine_backward_zprev(dA, self.params[l]['W'])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
             # 初層の場合
             else:
                 dW = affine_backward_weight(dA, X)  # 重みパラメータZ (入力データXを入力)
             # 計算した偏微分(勾配)を保持
-            grads['b'][l] = db
-            grads['W'][l] = dW
+            grads[l]['b'] = db
+            grads[l]['W'] = dW
 
         return grads
 
@@ -204,8 +203,8 @@ class BackpropNeuralNet:
         """
         # パラメータの更新
         for l in range(self.n_layers):
-            self.params['W'][l] -= self.learning_rate * grads['W'][l]
-            self.params['b'][l] -= self.learning_rate * grads['b'][l]
+            self.params[l]['W'] -= self.learning_rate * grads[l]['W']
+            self.params[l]['b'] -= self.learning_rate * grads[l]['b']
     
     def fit(self, X, T):
         """

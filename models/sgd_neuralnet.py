@@ -59,20 +59,20 @@ class SGDNeuralNet:
         """
         パラメータを初期化
         """
-        self.params={'W': [],
-                     'b': []}
+        # パラメータ格納用に空の辞書のリストを準備
+        self.params = [{} for l in range(self.n_layers)]
         # 重みパラメータ
-        self.params['W'].append(self.weight_init_std * \
-                            np.random.randn(self.input_size, self.hidden_size))  # 1層目の重みパラメータ
-        for l in range(self.n_layers-2):
-            self.params['W'].append(self.weight_init_std * \
-                            np.random.randn(self.hidden_size, self.hidden_size)) # 中間層の重みパラメータ
-        self.params['W'].append(self.weight_init_std * \
-                            np.random.randn(self.hidden_size, self.output_size)) # 出力層の重みパラメータ
+        self.params[0]['W'] = self.weight_init_std \
+                            * np.random.randn(self.input_size, self.hidden_size)  # 1層目の重みパラメータ
+        for l in range(1, self.n_layers-1):
+            self.params[l]['W'] = self.weight_init_std \
+                            * np.random.randn(self.hidden_size, self.hidden_size) # 中間層の重みパラメータ
+        self.params[self.n_layers-1]['W'] = self.weight_init_std \
+                            * np.random.randn(self.hidden_size, self.output_size) # 出力層の重みパラメータ
         # バイアスパラメータ
         for l in range(self.n_layers-1):
-            self.params['b'].append(np.zeros(self.hidden_size))  # 中間層のバイアスパラメータ
-        self.params['b'].append(np.zeros(self.output_size))  # 最終層のバイアスパラメータ
+            self.params[l]['b'] = np.zeros(self.hidden_size)  # 中間層のバイアスパラメータ
+        self.params[self.n_layers-1]['b'] = np.zeros(self.output_size)  # 最終層のバイアスパラメータ
 
     def _one_hot_encoding(self, T):
         """
@@ -105,13 +105,13 @@ class SGDNeuralNet:
         Z_current = X  # 入力値を保持
         # 中間層(1〜n_layers-1層目)の順伝播
         for l in range(self.n_layers-1):
-            W = self.params['W'][l]  # 重みパラメータ
-            b = self.params['b'][l]  # バイアスパラメータ
+            W = self.params[l]['W']  # 重みパラメータ
+            b = self.params[l]['b']  # バイアスパラメータ
             Z_current = forward_middle(Z_current, W, b, 
                 activation_function=self.activation_function)  # 中間層の計算
         # 出力層の順伝播
-        W_final = self.params['W'][self.n_layers-1]
-        b_final = self.params['b'][self.n_layers-1]
+        W_final = self.params[self.n_layers-1]['W']
+        b_final = self.params[self.n_layers-1]['b']
         Z_result = forward_last_classification(Z_current, W_final, b_final)
         return Z_result
     
@@ -161,7 +161,7 @@ class SGDNeuralNet:
             何層目のパラメータか
         """
         # 勾配計算対象のパラメータを抽出 (self.params更新時に一緒に更新されないようDeepCopyする)
-        P = copy.deepcopy(self.params[param_name][l])
+        P = copy.deepcopy(self.params[l][param_name])
 
         h = 1e-4  # 原書に記載された適切な微小変化量hの値として1e-4を採用
         P_ravel = np.ravel(P)  # Pが行列(重みパラメータ)の時、一旦ベクトルとして展開
@@ -173,16 +173,16 @@ class SGDNeuralNet:
             h_vector = np.eye(P_ravel.size)[idx] * h
             # f(x+h)の計算
             P1 = (P_ravel + h_vector).reshape(P.shape)  # 微小変換させたP
-            self.params[param_name][l] = P1  # 微小変化させたPをパラメータに反映
+            self.params[l][param_name] = P1  # 微小変化させたPをパラメータに反映
             fxh1 = self._loss(X, T)  # 微小変化後の損失関数を計算
             # f(x-h)の計算
             P2 = (P_ravel - h_vector).reshape(P.shape)  # 微小変換させたP
-            self.params[param_name][l] = P2  # 微小変化させたPをパラメータに反映
+            self.params[l][param_name] = P2  # 微小変化させたPをパラメータに反映
             fxh2 = self._loss(X, T)  # 微小変化後の損失関数を計算
             # 偏微分の計算
             grad[idx] = (fxh1 - fxh2) / (2*h)
             # 微小変化させたPを元に戻す
-            self.params[param_name][l] = P
+            self.params[l][param_name] = P
         
         return grad.reshape(P.shape)
 
@@ -190,11 +190,12 @@ class SGDNeuralNet:
         """
         ステップ2: 全パラメータの勾配を計算
         """
-        grads = {'W': [],
-                 'b': []}
+        # 勾配格納用 (空の辞書のリスト)
+        grads = [{} for l in range(self.n_layers)]
+        # 層ごとに計算
         for l in range(self.n_layers):
-            grads['W'].append(self._numerical_gradient(X, T, 'W', l))
-            grads['b'].append(self._numerical_gradient(X, T, 'b', l))
+            grads[l]['W'] = self._numerical_gradient(X, T, 'W', l)
+            grads[l]['b'] = self._numerical_gradient(X, T, 'b', l)
         return grads
 
     def update_parameters(self, grads):
@@ -203,8 +204,8 @@ class SGDNeuralNet:
         """
         # パラメータの更新
         for l in range(self.n_layers):
-            self.params['W'][l] -= self.learning_rate * grads['W'][l]
-            self.params['b'][l] -= self.learning_rate * grads['b'][l]
+            self.params[l]['W'] -= self.learning_rate * grads[l]['W']
+            self.params[l]['b'] -= self.learning_rate * grads[l]['b']
     
     def fit(self, X, T):
         """
