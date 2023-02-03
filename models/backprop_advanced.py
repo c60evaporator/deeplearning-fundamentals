@@ -3,6 +3,7 @@ from sklearn.preprocessing import OneHotEncoder
 from common.loss_funcions import cross_entropy_error, squared_error
 from common.forward_functions import forward_middle, forward_last_classification
 from common.backward_functions import softmax_loss_backward, affine_backward_bias, affine_backward_weight, affine_backward_zprev, relu_backward, sigmoid_backward
+from common.utils import calc_weight_init_std
 
 class BackpropAdvancedNet:
     def __init__(self, X, T,
@@ -72,22 +73,6 @@ class BackpropAdvancedNet:
         # パラメータを初期化
         self._initialize_parameters()
 
-    def _calc_weight_init_std(self, prev_node_num):
-        """
-        重みパラメータ初期値の標準偏差を計算
-        """
-        # 自動計算する場合
-        if self.weight_init_std == 'auto':
-            # 活性化関数がSigmoidの時、Xavierの初期値を使用
-            if self.activation_function == 'sigmoid':
-                return np.sqrt(1.0 / prev_node_num)
-            # 活性化関数がSigmoidの時、Xavierの初期値を使用
-            elif self.activation_function == 'relu':
-                return np.sqrt(2.0 / prev_node_num)
-        # 固定値を指定する場合
-        else:
-            return self.weight_init_std
-
     def _initialize_parameters(self):
         """
         パラメータを初期化
@@ -95,13 +80,13 @@ class BackpropAdvancedNet:
         self.params={'W': [],
                      'b': []}
         # 重みパラメータ
-        self.params['W'].append(self._calc_weight_init_std(self.input_size) * \
-                            np.random.randn(self.input_size, self.hidden_size))  # 1層目の重みパラメータ
+        self.params['W'].append(calc_weight_init_std(self.input_size, self.weight_init_std, self.activation_function) \
+                            * np.random.randn(self.input_size, self.hidden_size))  # 1層目の重みパラメータ
         for l in range(self.n_layers-2):
-            self.params['W'].append(self._calc_weight_init_std(self.hidden_size) * \
-                            np.random.randn(self.hidden_size, self.hidden_size)) # 中間層の重みパラメータ
-        self.params['W'].append(self._calc_weight_init_std(self.hidden_size) * \
-                            np.random.randn(self.hidden_size, self.output_size)) # 出力層の重みパラメータ
+            self.params['W'].append(calc_weight_init_std(self.hidden_size, self.weight_init_std, self.activation_function) \
+                            * np.random.randn(self.hidden_size, self.hidden_size)) # 中間層の重みパラメータ
+        self.params['W'].append(calc_weight_init_std(self.hidden_size, self.weight_init_std, self.activation_function) \
+                            * np.random.randn(self.hidden_size, self.output_size)) # 出力層の重みパラメータ
         # バイアスパラメータ
         for l in range(self.n_layers-1):
             self.params['b'].append(np.zeros(self.hidden_size))  # 中間層のバイアスパラメータ
@@ -202,15 +187,15 @@ class BackpropAdvancedNet:
         # Softmax-with-Lossレイヤ
         dA = softmax_loss_backward(Y, T)
         # Affineレイヤ
-        db = affine_backward_bias(dA)  # バイアスパラメータb
-        dW = affine_backward_weight(dA, Z_intermediate[self.n_layers-2])  # 重みパラメータZ (前層出力Z_prevを入力)
-        dZ_prev = affine_backward_zprev(dA, self.params['W'][self.n_layers-1])  # 前層出力Z_prev (重みパラメータWを入力)
+        db = affine_backward_bias(dA)  # バイアスパラメータbの偏微分
+        dW = affine_backward_weight(dA, Z_intermediate[self.n_layers-2])  # 重みパラメータWの偏微分 (前層出力Z_prevを入力)
+        dZ_prev = affine_backward_zprev(dA, self.params['W'][self.n_layers-1])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
         grads['b'][self.n_layers-1] = db
         grads['W'][self.n_layers-1] = dW
         ###### 中間層の逆伝播 (下流から順番にループ) ######
         for l in range(self.n_layers-2, -1, -1):
-            # 当該層の出力微分値dZを更新
+            # 当該層の出力偏微分dZを更新
             dZ = dZ_prev.copy()
             # Reluレイヤ
             if self.activation_function == 'relu':
@@ -219,11 +204,11 @@ class BackpropAdvancedNet:
             if self.activation_function == 'sigmoid':
                 dA = sigmoid_backward(dZ, Z_intermediate[l])  # (中間層出力Zを入力)
             # Affineレイヤ
-            db = affine_backward_bias(dA)  # バイアスパラメータb
+            db = affine_backward_bias(dA)  # バイアスパラメータbの偏微分
             # 初層以外の場合
             if l > 0:
-                dW = affine_backward_weight(dA, Z_intermediate[l-1])  # 重みパラメータZ (前層出力Z_prevを入力)
-                dZ_prev = affine_backward_zprev(dA, self.params['W'][l])  # 前層出力Z_prev (重みパラメータWを入力)
+                dW = affine_backward_weight(dA, Z_intermediate[l-1])  # 重みパラメータWの偏微分 (前層出力Z_prevを入力)
+                dZ_prev = affine_backward_zprev(dA, self.params['W'][l])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
             # 初層の場合
             else:
                 dW = affine_backward_weight(dA, X)  # 重みパラメータZ (入力データXを入力)

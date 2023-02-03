@@ -167,15 +167,15 @@ class BackpropNeuralNet:
         # Softmax-with-Lossレイヤ
         dA = softmax_loss_backward(Y, T)
         # Affineレイヤ
-        db = affine_backward_bias(dA)  # バイアスパラメータb
-        dW = affine_backward_weight(dA, Z_intermediate[self.n_layers-2])  # 重みパラメータZ (前層出力Z_prevを入力)
-        dZ_prev = affine_backward_zprev(dA, self.params['W'][self.n_layers-1])  # 前層出力Z_prev (重みパラメータWを入力)
+        db = affine_backward_bias(dA)  # バイアスパラメータbの偏微分
+        dW = affine_backward_weight(dA, Z_intermediate[self.n_layers-2])  # 重みパラメータWの偏微分 (前層出力Z_prevを入力)
+        dZ_prev = affine_backward_zprev(dA, self.params['W'][self.n_layers-1])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
         grads['b'][self.n_layers-1] = db
         grads['W'][self.n_layers-1] = dW
         ###### 中間層の逆伝播 (下流から順番にループ) ######
         for l in range(self.n_layers-2, -1, -1):
-            # 当該層の出力微分値dZを更新
+            # 当該層の出力偏微分dZを更新
             dZ = dZ_prev.copy()
             # Reluレイヤ
             if self.activation_function == 'relu':
@@ -184,11 +184,11 @@ class BackpropNeuralNet:
             if self.activation_function == 'sigmoid':
                 dA = sigmoid_backward(dZ, Z_intermediate[l])  # (中間層出力Zを入力)
             # Affineレイヤ
-            db = affine_backward_bias(dA)  # バイアスパラメータb
+            db = affine_backward_bias(dA)  # バイアスパラメータbの偏微分
             # 初層以外の場合
             if l > 0:
-                dW = affine_backward_weight(dA, Z_intermediate[l-1])  # 重みパラメータZ (前層出力Z_prevを入力)
-                dZ_prev = affine_backward_zprev(dA, self.params['W'][l])  # 前層出力Z_prev (重みパラメータWを入力)
+                dW = affine_backward_weight(dA, Z_intermediate[l-1])  # 重みパラメータWの偏微分 (前層出力Z_prevを入力)
+                dZ_prev = affine_backward_zprev(dA, self.params['W'][l])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
             # 初層の場合
             else:
                 dW = affine_backward_weight(dA, X)  # 重みパラメータZ (入力データXを入力)
