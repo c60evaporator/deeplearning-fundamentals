@@ -33,7 +33,8 @@ epsilon = {'sgd': None, 'momentum': None, 'adagrad': 1e-8, 'rmsprop': 1e-8, 'ada
 for algo in ['sgd', 'momentum' ,'adagrad', 'rmsprop', 'adam']:
 
     # ニューラルネットワーク計算用クラス (最適化アルゴリズム修正)
-    network = BackpropAdvancedNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
+    network = BackpropAdvancedNet(X_train, T_train, 
+                        hidden_size=hidden_size, n_layers=n_layers, 
                         batch_size=batch_size, n_iter=n_iter, 
                         loss_type='cross_entropy', activation_function='sigmoid', weight_init_std=weight_init_std,
                         solver=algo, 

@@ -26,9 +26,11 @@ learning_rate = 1.0  # 学習率
 weight_init_std=0.1  # 重み初期値生成時の標準偏差
 
 # ニューラルネットワーク計算用クラス (誤差逆伝播法バージョン)
-network = BackpropNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
-                       learning_rate=learning_rate, batch_size=batch_size, n_iter=n_iter, 
+network = BackpropNeuralNet(X_train, T_train, 
+                       hidden_size=hidden_size, n_layers=n_layers, 
+                       batch_size=batch_size, n_iter=n_iter, 
                        loss_type='cross_entropy', activation_function='sigmoid',
+                       learning_rate=learning_rate, 
                        weight_init_std=weight_init_std)
 start = time.time()  # 時間計測用
 # SGDによる学習

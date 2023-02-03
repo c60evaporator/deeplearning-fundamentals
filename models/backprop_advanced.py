@@ -6,11 +6,11 @@ from common.backward_functions import softmax_loss_backward, affine_backward_bia
 from common.utils import calc_weight_init_std
 
 class BackpropAdvancedNet:
-    def __init__(self, X, T,
-                 hidden_size, n_layers, 
-                 learning_rate, batch_size, n_iter,
+    def __init__(self, X, T, 
+                 hidden_size, n_layers,
+                 batch_size, n_iter,
                  loss_type, activation_function,
-                 solver='sgd', momentum=0.9,
+                 learning_rate, solver='sgd', momentum=0.9,
                  beta_1=0.9, beta_2=0.999, epsilon=1e-8,
                  weight_init_std='auto'):
         """
@@ -26,8 +26,6 @@ class BackpropAdvancedNet:
             隠れ層の1層あたりニューロン
         n_layers : int
             層数 (隠れ層の数 - 1)
-        learning_rate : float
-            学習率
         batch_size : int
             ミニバッチのデータ数
         n_iter : int
@@ -36,6 +34,8 @@ class BackpropAdvancedNet:
             損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
         activation_function : {'sigmoid', 'relu'}
             中間層活性化関数の種類 ('sigmoid': シグモイド関数, 'relu': ReLU関数)
+        learning_rate : float
+            学習率
         solver : {'sgd', 'momentum', 'adagrad', 'rmsprop', 'adam'}
             最適化アルゴリズムの種類 ('sgd': SGD, 'momentum': モーメンタム, 'adagrad': AdaGrad, 'rmsprop': 'RMSProp', 'adam': Adam)
         momentum : float
@@ -54,11 +54,11 @@ class BackpropAdvancedNet:
         self.output_size = T.shape[1] if T.ndim == 2 else np.unique(T).size  # クラス数 (出力層のニューロン数)
         self.hidden_size = hidden_size  # 隠れ層の1層あたりニューロン
         self.n_layers = n_layers  # 層数
-        self.learning_rate = learning_rate  # 学習率
         self.batch_size = batch_size  # ミニバッチのデータ数
         self.n_iter = n_iter  # 学習のイテレーション(繰り返し)数
         self.loss_type = loss_type  # 損失関数の種類
         self.activation_function = activation_function  # 中間層活性化関数の種類
+        self.learning_rate = learning_rate  # 学習率
         self.solver = solver  # 最適化アルゴリズムの種類
         self.momentum = momentum  # 勾配移動平均の減衰率ハイパーパラメータ (モーメンタムで使用)
         self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)

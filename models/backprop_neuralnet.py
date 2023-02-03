@@ -5,10 +5,11 @@ from common.forward_functions import forward_middle, forward_last_classification
 from common.backward_functions import softmax_loss_backward, affine_backward_bias, affine_backward_weight, affine_backward_zprev, relu_backward, sigmoid_backward
 
 class BackpropNeuralNet:
-    def __init__(self, X, T,
-                 hidden_size, n_layers, 
-                 learning_rate, batch_size, n_iter,
+    def __init__(self, X, T, 
+                 hidden_size, n_layers,
+                 batch_size, n_iter,
                  loss_type, activation_function,
+                 learning_rate,
                  weight_init_std=0.01):
         """
         ハイパーパラメータの読込＆パラメータの初期化
@@ -23,8 +24,6 @@ class BackpropNeuralNet:
             隠れ層の1層あたりニューロン
         n_layers : int
             層数 (隠れ層の数 - 1)
-        learning_rate : float
-            学習率
         batch_size : int
             ミニバッチのデータ数
         n_iter : int
@@ -33,6 +32,8 @@ class BackpropNeuralNet:
             損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
         activation_function : {'sigmoid', 'relu'}
             中間層活性化関数の種類 ('sigmoid': シグモイド関数, 'relu': ReLU関数)
+        learning_rate : float
+            学習率
         weight_init_std : float
             重み初期値生成時の標準偏差
         """
