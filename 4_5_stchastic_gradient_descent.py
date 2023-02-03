@@ -45,9 +45,11 @@ plt.show()
 # %% seaborn-analyzerで決定境界プロット
 from seaborn_analyzer import classplot
 
-network = SGDNeuralNet(X_train, T_train, hidden_size=hidden_size, n_layers=n_layers, 
-                       learning_rate=learning_rate, batch_size=batch_size, n_iter=n_iter, 
+network = SGDNeuralNet(X_train, T_train, 
+                       hidden_size=hidden_size, n_layers=n_layers, 
+                       batch_size=batch_size, n_iter=n_iter, 
                        loss_type='cross_entropy', activation_function='sigmoid',
+                       learning_rate=learning_rate, 
                        weight_init_std=weight_init_std)
 # 決定境界をプロット
 classplot.class_separator_plot(network, x=X_train, y=T_train, 
