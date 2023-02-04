@@ -34,8 +34,8 @@ class Dense():
         # 層出力の形状はunitsと等しい (ニューロン数)
         return (self.units,)
 
-    def build(self, input_shape=None):
-        """パラメータと勾配の初期化"""
+    def initialize_parameters(self, input_shape=None):
+        """パラメータの初期化"""
         # パラメータ初期化(重み+バイアス)
         self.params={}
         self.params['W'] = calc_weight_init_std(input_shape[-1], self.weight_init_std, self.activation_function) * \
@@ -53,7 +53,7 @@ class Dense():
     def backward(self, dZ):
         """逆伝播"""
         # 勾配保持用
-        self.grad={}
+        self.grads={}
         # Reluレイヤ
         if self.activation_function == 'relu':
             dA = relu_backward(dZ, self.A)  # (Affineレイヤ出力Aを入力)
@@ -65,8 +65,8 @@ class Dense():
         dW = affine_backward_weight(dA, self.Z_prev)  # 重みパラメータZの偏微分 (前層出力Z_prevを入力)
         dZ_prev = affine_backward_zprev(dA, self.params['W'])  # 前層出力dZ_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
-        self.grad['b'] = db
-        self.grad['W'] = dW
+        self.grads['b'] = db
+        self.grads['W'] = dW
         # 前層出力の偏微分(勾配)dZ_prevを出力
         return dZ_prev
 
@@ -100,7 +100,7 @@ class DenseOutput(Dense):
     def backward(self, Y, T):
         """逆伝播"""
         # 勾配保持用
-        self.grad={}
+        self.grads={}
         # Softmax-with-Lossレイヤ
         dA = softmax_loss_backward(Y, T)
         # Affineレイヤ
@@ -108,7 +108,7 @@ class DenseOutput(Dense):
         dW = affine_backward_weight(dA, self.Z_prev)  # 重みパラメータZの偏微分 (前層出力Z_prevを入力)
         dZ_prev = affine_backward_zprev(dA, self.params['W'])  # 前層出力dZ_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
-        self.grad['b'] = db
-        self.grad['W'] = dW
+        self.grads['b'] = db
+        self.grads['W'] = dW
         # 前層出力の偏微分(勾配)dZ_prevを出力
         return dZ_prev
