@@ -20,29 +20,32 @@ class Dense():
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
         input_shape : tuple
-            入力データの形状 (初層のみ入力が必要)
+            入力データの形状 (初層のみ入力が必要, データ数は形状に含めない)
         """
         self.units = units
         self.activation_function = activation_function
         self.weight_init_std = weight_init_std
         self.input_shape = input_shape
-        # 層出力データの形状を計算
-        self.output_shape = self._calc_output_shape()
 
     def _calc_output_shape(self):
         """層出力データの形状を計算"""
-        # 層出力の形状はunitsと等しい (ニューロン数)
-        return (self.units,)
+        # 層出力の形状はunitsと等しい (=ニューロン数)
+        self.output_shape = (self.units,)
 
     def initialize_parameters(self, input_shape=None):
         """パラメータの初期化"""
+        # input_shape引数が指定されているとき、メンバ変数に入力
+        if input_shape is not None and self.input_shape is None:
+            self.input_shape = input_shape
+        # 層出力データの形状を計算
+        self._calc_output_shape()
         # パラメータ初期化(重み+バイアス)
         self.params={}
-        self.params['W'] = calc_weight_init_std(input_shape[-1], self.weight_init_std, self.activation_function) * \
-                            np.random.randn(input_shape[-1], self.units)
+        self.params['W'] = calc_weight_init_std(self.input_shape[-1], self.weight_init_std, self.activation_function) * \
+                            np.random.randn(self.input_shape[-1], self.units)
         self.params['b'] = np.zeros(self.units)
 
-    def forward(self, Z_prev):
+    def forward(self, Z_prev, train_flg=None):
         """順伝播"""
         self.Z_prev = Z_prev  # 入力を保持 (逆伝播で使用)
         # 順伝播を計算(Affineレイヤ出力A、活性化関数レイヤ出力Zはメンバ変数に保持)
@@ -90,7 +93,7 @@ class DenseOutput(Dense):
         super().__init__(units=units, activation_function=activation_function, 
                          weight_init_std=weight_init_std)
 
-    def forward(self, Z_prev):
+    def forward(self, Z_prev, train_flg=None):
         """順伝播"""
         self.Z_prev = Z_prev  # 入力を保持 (逆伝播で使用)
         # 順伝播を計算(Affineレイヤ出力A、活性化関数レイヤ出力Zはメンバ変数に保持)

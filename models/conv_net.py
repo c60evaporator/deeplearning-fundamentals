@@ -61,9 +61,9 @@ class ConvolutionNet:
         """
         # 層ごとにパラメータ初期化
         for l, layer in enumerate(self.layers):
-            # 初層のとき、自身のinput_shapeを入力サイズとして使用
+            # 初層のとき、クラス初期化時に指定したinput_shapeを入力サイズとして使用
             if l == 0:
-                layer.initialize_parameters(input_shape=layer.input_shape)
+                layer.initialize_parameters()
             # 初層以外のとき、前層の出力サイズを入力サイズとして使用
             else:
                 layer.initialize_parameters(input_shape=self.layers[l-1].output_shape)
@@ -94,7 +94,7 @@ class ConvolutionNet:
         T_cat = np.vectorize(lambda x: self.one_hot_encoder_.categories_[0][x])(T_label)
         return T_cat
     
-    def _predict_onehot(self, X, output_intermediate=False):
+    def _predict_onehot(self, X, train_flg=False):
         """
         順伝播を全て計算(One-hot encodingで出力)
         """
@@ -140,7 +140,7 @@ class ConvolutionNet:
         ステップ2: 誤差逆伝播法で全パラメータの勾配を計算
         """
         # 順伝播 (中間層出力Zおよび中間層の中間結果Aも保持する)
-        Y = self._predict_onehot(X, output_intermediate=True)
+        Y = self._predict_onehot(X, train_flg=True)
         ###### 出力層の逆伝播 ######
         dZ = self.layers[self.n_layers-1].backward(Y, T)  # 逆伝播を計算
         ###### 中間層の逆伝播 (下流から順番にループ) ######
