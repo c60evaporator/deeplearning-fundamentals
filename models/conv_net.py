@@ -101,7 +101,7 @@ class ConvolutionNet:
         Z_current = X  # 入力値を保持
         # 順伝播
         for l, layer in enumerate(self.layers):
-            Z_current = layer.forward(Z_current)
+            Z_current = layer.forward(Z_current, train_flg)
         #　結果を出力
         return Z_current
     
