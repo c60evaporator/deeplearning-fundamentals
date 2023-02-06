@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from common.activation_functions import sigmoid, relu
 
-input_data = np.random.randn(1000, 100)  # 1000個の入力データ(標準正規分布から生成)
+input_data = np.random.randn(1000, 100)  # 1000個の入力データ=バッチサイズ(標準正規分布から生成)
 node_num = 100  # 各隠れ層のノード（ニューロン）の数
 hidden_layer_size = 5  # 隠れ層が5層
 

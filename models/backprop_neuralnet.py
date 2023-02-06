@@ -99,7 +99,7 @@ class BackpropNeuralNet:
         T_cat = np.vectorize(lambda x: self.one_hot_encoder_.categories_[0][x])(T_label)
         return T_cat
     
-    def _predict_onehot(self, X, output_intermediate=False):
+    def _predict_onehot(self, X, train_flg=False):
         """
         順伝播を全て計算(One-hot encodingで出力)
         """
@@ -119,7 +119,7 @@ class BackpropNeuralNet:
         b_final = self.params[self.n_layers-1]['b']
         Z_result = forward_last_classification(Z_current, W_final, b_final)
         # 中間層出力も出力する場合 (5章の誤差逆伝播法で使用)
-        if output_intermediate:
+        if train_flg:
             return Z_result, Z_intermediate, A_intermediate
         # 中間層出力を出力しない場合
         else:
@@ -160,7 +160,7 @@ class BackpropNeuralNet:
         ステップ2: 誤差逆伝播法で全パラメータの勾配を計算
         """
         # 順伝播 (中間層出力Zおよび中間層の中間結果Aも保持する)
-        Y, Z_intermediate, A_intermediate = self._predict_onehot(X, output_intermediate=True)
+        Y, Z_intermediate, A_intermediate = self._predict_onehot(X, train_flg=True)
         # 逆伝播結果格納用 (空の辞書のリスト)
         grads = [{} for l in range(self.n_layers)]
         ###### 出力層の逆伝播 ######
