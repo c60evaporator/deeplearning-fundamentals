@@ -48,7 +48,7 @@ class BackpropAdvancedNet:
         epsilon : float
             ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', or 'adam'の時のみ有効)
         weight_decay_lambda : float
-
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
         """
@@ -67,7 +67,7 @@ class BackpropAdvancedNet:
         self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)
         self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
         self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
-        self.weight_decay_lambda = weight_decay_lambda
+        self.weight_decay_lambda = weight_decay_lambda  # Weight decayの正則化効果の強さを表すハイパーパラメータ
         self.weight_init_std = weight_init_std  # 重み初期値生成時の標準偏差
         # 損失関数と活性化関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:

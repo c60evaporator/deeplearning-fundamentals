@@ -1,4 +1,4 @@
-# %% 各種最適化アルゴリズムの比較
+# %% Weight decay
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -42,7 +42,8 @@ for algo in ['sgd', 'momentum' ,'adagrad', 'rmsprop', 'adam']:
                         momentum=momentum[algo],
                         beta_1=beta_1[algo],
                         beta_2=beta_2[algo],
-                        epsilon=epsilon[algo]
+                        epsilon=epsilon[algo],
+                        weight_decay_lambda=0.000001
                         )
     start = time.time()  # 時間計測用
     # SGDによる学習
@@ -54,4 +55,3 @@ for algo in ['sgd', 'momentum' ,'adagrad', 'rmsprop', 'adam']:
     plt.plot(range(n_iter), network.train_loss_list)
     plt.title(algo)
     plt.show()
-# %%
