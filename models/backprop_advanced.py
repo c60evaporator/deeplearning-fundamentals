@@ -12,6 +12,7 @@ class BackpropAdvancedNet:
                  loss_type, activation_function,
                  learning_rate, solver='sgd', momentum=0.9,
                  beta_1=0.9, beta_2=0.999, epsilon=1e-8,
+                 weight_decay_lambda=0,
                  weight_init_std='auto'):
         """
         ハイパーパラメータの読込＆パラメータの初期化
@@ -46,6 +47,8 @@ class BackpropAdvancedNet:
             過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop' or 'adam'の時のみ有効)
         epsilon : float
             ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', or 'adam'の時のみ有効)
+        weight_decay_lambda : float
+
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
         """
@@ -64,6 +67,7 @@ class BackpropAdvancedNet:
         self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)
         self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
         self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
+        self.weight_decay_lambda = weight_decay_lambda
         self.weight_init_std = weight_init_std  # 重み初期値生成時の標準偏差
         # 損失関数と活性化関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
@@ -168,11 +172,17 @@ class BackpropAdvancedNet:
         """
         Y = self._predict_onehot(X)
         if self.loss_type == 'cross_entropy':
-            return cross_entropy_error(Y, T)
+            loss = cross_entropy_error(Y, T)
         elif self.loss_type == 'squared_error':
-            return squared_error(Y, T)
+            loss = squared_error(Y, T)
         else:
             raise Exception('The `loss_type` argument should be "cross_entropy" or "squared_error"')
+        # Weight decayの計算
+        weight_decay = 0
+        for l in range(self.n_layers):
+            weight_decay += 0.5 * self.weight_decay_lambda * np.sum(self.params[l]['W'] ** 2)
+        # 元の損失関数 + Weight decayを返す
+        return loss + weight_decay
 
     def gradient_backpropagation(self, X, T):
         """
@@ -191,7 +201,7 @@ class BackpropAdvancedNet:
         dZ_prev = affine_backward_zprev(dA, self.params[self.n_layers-1]['W'])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
         grads[self.n_layers-1]['b'] = db
-        grads[self.n_layers-1]['W'] = dW
+        grads[self.n_layers-1]['W'] = dW + self.weight_decay_lambda * self.params[self.n_layers-1]['W']  # Weight decay分を勾配に足す
         ###### 中間層の逆伝播 (下流から順番にループ) ######
         for l in range(self.n_layers-2, -1, -1):
             # 当該層の出力偏微分dZを更新
@@ -213,7 +223,7 @@ class BackpropAdvancedNet:
                 dW = affine_backward_weight(dA, X)  # 重みパラメータZ (入力データXを入力)
             # 計算した偏微分(勾配)を保持
             grads[l]['b'] = db
-            grads[l]['W'] = dW
+            grads[l]['W'] = dW + self.weight_decay_lambda * self.params[l]['W']  # Weight decay分を勾配に足す
 
         return grads
     
