@@ -193,7 +193,7 @@ class ConvolutionNet:
         """
         # 層ごとに最適化アルゴリズムによるパラメータ更新を実施
         for l, layer in enumerate(self.layers):
-            self.optimizers[l].update(layer.params, layer.grads, i_iter)
+            self.optimizers[l].update(layer.params, layer.grads)
 
     def fit(self, X, T):
         """
