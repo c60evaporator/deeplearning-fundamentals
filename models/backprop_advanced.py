@@ -201,7 +201,8 @@ class BackpropAdvancedNet:
         dZ_prev = affine_backward_zprev(dA, self.params[self.n_layers-1]['W'])  # 前層出力Z_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
         grads[self.n_layers-1]['b'] = db
-        grads[self.n_layers-1]['W'] = dW + self.weight_decay_lambda * self.params[self.n_layers-1]['W']  # Weight decay分を勾配に足す
+        grads[self.n_layers-1]['W'] = dW \
+            + self.weight_decay_lambda * self.params[self.n_layers-1]['W']  # Weight decay分を勾配に足す
         ###### 中間層の逆伝播 (下流から順番にループ) ######
         for l in range(self.n_layers-2, -1, -1):
             # 当該層の出力偏微分dZを更新
@@ -223,7 +224,8 @@ class BackpropAdvancedNet:
                 dW = affine_backward_weight(dA, X)  # 重みパラメータZ (入力データXを入力)
             # 計算した偏微分(勾配)を保持
             grads[l]['b'] = db
-            grads[l]['W'] = dW + self.weight_decay_lambda * self.params[l]['W']  # Weight decay分を勾配に足す
+            grads[l]['W'] = dW \
+                + self.weight_decay_lambda * self.params[l]['W']  # Weight decay分を勾配に足す
 
         return grads
     
