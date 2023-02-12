@@ -10,7 +10,8 @@ class ConvolutionNet:
                  learning_rate, 
                  solver='sgd', momentum=0.9,
                  beta_1=0.9, beta_2=0.999, epsilon=1e-8,
-                 weight_decay_lambda=None):
+                 weight_decay_lambda=None,
+                 bias_correction=False):
         """
         ハイパーパラメータの読込＆パラメータの初期化
 
@@ -26,20 +27,20 @@ class ConvolutionNet:
             損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
         learning_rate : float
             学習率
-        solver : {'sgd', 'momentum', 'adagrad', 'rmsprop', 'adam'}
-            最適化アルゴリズムの種類 ('sgd': SGD, 'momentum': モーメンタム, 'adagrad': AdaGrad, 'rmsprop': 'RMSProp', 'adam': Adam)
+        solver : {'sgd', 'momentum', 'adagrad', 'rmsprop', 'adam', 'adamw'}
+            最適化アルゴリズムの種類 ('sgd': SGD, 'momentum': モーメンタム, 'adagrad': AdaGrad, 'rmsprop': 'RMSProp', 'adam': Adam, 'adamw': AdamW)
         momentum : float
             勾配移動平均の減衰率ハイパーパラメータ (solver = 'momentum'の時のみ有効)
         beta_1 : float
-            勾配移動平均の減衰率ハイパーパラメータ (solver = 'adam'の時のみ有効)
+            勾配移動平均の減衰率ハイパーパラメータ (solver = 'adam' or 'adamw'の時のみ有効)
         beta_2 : float
-            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop' or 'adam'の時のみ有効)
+            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop', 'adam', or 'adamw'の時のみ有効)
         epsilon : float
-            ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', or 'adam'の時のみ有効)
+            ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', 'adam', or 'adamw'の時のみ有効)
         weight_decay_lambda : float
             Weight decayの正則化効果の強さを表すハイパーパラメータ
         bias_correction : bool
-            Adamでバイアス補正を実施するか
+            Adamでバイアス補正を実施するか (solver = 'adam' or 'adamw'の時のみ有効)
         """
         # 各種メンバ変数 (ハイパーパラメータ等)の入力
         self.layers = layers  # ネットワーク構造 (各層のクラスをリスト化したもの)
@@ -53,6 +54,7 @@ class ConvolutionNet:
         self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
         self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
         self.weight_decay_lambda = weight_decay_lambda  # Weight decayの正則化効果の強さを表すハイパーパラメータ
+        self.bias_correction = bias_correction  # Adamでバイアス補正を実施するか (Adamで使用)
         # 損失関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
             raise Exception('the `loss_type` argument should be "cross_entropy" or "squared_error"')
@@ -182,7 +184,7 @@ class ConvolutionNet:
                 self.optimizers.append(RMSprop(self.learning_rate, self.beta_2, self.epsilon))
             # 最適化アルゴリズムがAdamの時
             elif self.solver == 'adam':
-                self.optimizers.append(Adam(self.learning_rate, self.beta_1, self.beta_2, self.epsilon))
+                self.optimizers.append(Adam(self.learning_rate, self.beta_1, self.beta_2, self.epsilon, bias_correction=self.bias_correction))
             
             # 最適化で使用する変数の初期化
             self.optimizers[l].initialize_opt_params(layer.params)
@@ -193,7 +195,7 @@ class ConvolutionNet:
         """
         # 層ごとに最適化アルゴリズムによるパラメータ更新を実施
         for l, layer in enumerate(self.layers):
-            self.optimizers[l].update(layer.params, layer.grads)
+            self.optimizers[l].update(layer.params, layer.grads, i_iter)
 
     def fit(self, X, T):
         """
