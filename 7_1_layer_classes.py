@@ -49,7 +49,8 @@ for algo in ['sgd', 'momentum' ,'adagrad', 'rmsprop', 'adam']:
                         momentum=momentum[algo],
                         beta_1=beta_1[algo],
                         beta_2=beta_2[algo],
-                        epsilon=epsilon[algo]
+                        epsilon=epsilon[algo],
+                        weight_decay_lambda=0.000001
                         )
     start = time.time()  # 時間計測用
     # SGDによる学習

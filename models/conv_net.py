@@ -9,7 +9,8 @@ class ConvolutionNet:
                  loss_type,
                  learning_rate, 
                  solver='sgd', momentum=0.9,
-                 beta_1=0.9, beta_2=0.999, epsilon=1e-8):
+                 beta_1=0.9, beta_2=0.999, epsilon=1e-8,
+                 weight_decay_lambda=None):
         """
         ハイパーパラメータの読込＆パラメータの初期化
 
@@ -35,6 +36,10 @@ class ConvolutionNet:
             過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop' or 'adam'の時のみ有効)
         epsilon : float
             ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', or 'adam'の時のみ有効)
+        weight_decay_lambda : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
+        bias_correction : bool
+            Adamでバイアス補正を実施するか
         """
         # 各種メンバ変数 (ハイパーパラメータ等)の入力
         self.layers = layers  # ネットワーク構造 (各層のクラスをリスト化したもの)
@@ -47,6 +52,7 @@ class ConvolutionNet:
         self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)
         self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
         self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
+        self.weight_decay_lambda = weight_decay_lambda  # Weight decayの正則化効果の強さを表すハイパーパラメータ
         # 損失関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
             raise Exception('the `loss_type` argument should be "cross_entropy" or "squared_error"')
@@ -67,6 +73,10 @@ class ConvolutionNet:
             # 初層以外のとき、前層の出力サイズを入力サイズとして使用
             else:
                 layer.initialize_parameters(input_shape=self.layers[l-1].output_shape)
+
+            # 全結合層かつ全体のWeight decay係数が入力されているとき、層ごとに係数を適用
+            if 'W' in layer.params and self.weight_decay_lambda is not None:
+                layer.weight_decay_lambda = self.weight_decay_lambda
         # 最適化用クラスも初期化
         self._initialize_optimizers()
 
@@ -129,11 +139,18 @@ class ConvolutionNet:
         """
         Y = self._predict_onehot(X)
         if self.loss_type == 'cross_entropy':
-            return cross_entropy_error(Y, T)
+            loss = cross_entropy_error(Y, T)
         elif self.loss_type == 'squared_error':
-            return squared_error(Y, T)
+            loss = squared_error(Y, T)
         else:
             raise Exception('The `loss_type` argument should be "cross_entropy" or "squared_error"')
+        # Weight decayの計算
+        weight_decay = 0
+        for l, layer in enumerate(self.layers):
+            if 'W' in layer.params:
+                weight_decay += 0.5 * layer.weight_decay_lambda * np.sum(layer.params['W'] ** 2)
+        # 元の損失関数 + Weight decayを返す
+        return loss + weight_decay
 
     def gradient_backpropagation(self, X, T):
         """
@@ -170,13 +187,13 @@ class ConvolutionNet:
             # 最適化で使用する変数の初期化
             self.optimizers[l].initialize_opt_params(layer.params)
 
-    def update_parameters(self):
+    def update_parameters(self, i_iter):
         """
         ステップ3: パラメータの更新
         """
         # 層ごとに最適化アルゴリズムによるパラメータ更新を実施
         for l, layer in enumerate(self.layers):
-            self.optimizers[l].update(layer.params, layer.grads)
+            self.optimizers[l].update(layer.params, layer.grads, i_iter)
 
     def fit(self, X, T):
         """
@@ -201,7 +218,7 @@ class ConvolutionNet:
             # ステップ2: 勾配の計算
             self.gradient_backpropagation(X_batch, T_batch)
             # ステップ3: パラメータの更新
-            self.update_parameters()
+            self.update_parameters(i_iter)
             # 学習経過の記録
             loss = self._loss(X_batch, T_batch)
             self.train_loss_list.append(loss)
