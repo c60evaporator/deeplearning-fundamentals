@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from common.loss_funcions import cross_entropy_error, squared_error
-from common.optimizers import SGD, Momentum, AdaGrad, RMSprop, Adam
+from common.optimizers import SGD, Momentum, AdaGrad, RMSprop, Adam, AdamW
 
 class ConvolutionNet:
     def __init__(self, layers, 
@@ -55,6 +55,7 @@ class ConvolutionNet:
         self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
         self.weight_decay_lambda = weight_decay_lambda  # Weight decayの正則化効果の強さを表すハイパーパラメータ
         self.bias_correction = bias_correction  # Adamでバイアス補正を実施するか (Adamで使用)
+
         # 損失関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
             raise Exception('the `loss_type` argument should be "cross_entropy" or "squared_error"')
@@ -65,7 +66,7 @@ class ConvolutionNet:
 
     def _initialize_parameters(self):
         """
-        パラメータを初期化
+        パラメータ等を初期化
         """
         # 層ごとにパラメータ初期化
         for l, layer in enumerate(self.layers):
@@ -79,6 +80,12 @@ class ConvolutionNet:
             # 全結合層かつ全体のWeight decay係数が入力されているとき、層ごとに係数を適用
             if 'W' in layer.params and self.weight_decay_lambda is not None:
                 layer.weight_decay_lambda = self.weight_decay_lambda
+
+        # 最適化アルゴリズムがAdamWのとき、損失関数にWeight decayは適用しないようメンバ変数を修正する
+        if self.solver == 'adamw':
+            self.weight_decay_lambda_adamw = self.weight_decay_lambda
+            self.weight_decay_lambda = 0
+
         # 最適化用クラスも初期化
         self._initialize_optimizers()
 
@@ -184,7 +191,13 @@ class ConvolutionNet:
                 self.optimizers.append(RMSprop(self.learning_rate, self.beta_2, self.epsilon))
             # 最適化アルゴリズムがAdamの時
             elif self.solver == 'adam':
-                self.optimizers.append(Adam(self.learning_rate, self.beta_1, self.beta_2, self.epsilon, bias_correction=self.bias_correction))
+                self.optimizers.append(Adam(self.learning_rate, self.beta_1, self.beta_2, self.epsilon, 
+                                            bias_correction=self.bias_correction))
+            # 最適化アルゴリズムがAdamWの時
+            elif self.solver == 'adamw':
+                self.optimizers.append(AdamW(self.learning_rate, self.beta_1, self.beta_2, self.epsilon, 
+                                             bias_correction=self.bias_correction, 
+                                             weight_decay_lambda=self.weight_decay_lambda_adamw))
             
             # 最適化で使用する変数の初期化
             self.optimizers[l].initialize_opt_params(layer.params)
