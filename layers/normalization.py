@@ -46,23 +46,6 @@ class BatchNormalization:
         self.running_mean = np.zeros(self.reshaped_shape)
         self.running_var = np.zeros(self.reshaped_shape)
 
-    def __init__(self, gamma, beta, momentum=0.9, running_mean=None, running_var=None):
-        self.gamma = gamma
-        self.beta = beta
-        self.momentum = momentum
-        self.input_shape = None # Conv層の場合は4次元、全結合層の場合は2次元  
-
-        # テスト時に使用する平均と分散
-        self.running_mean = running_mean
-        self.running_var = running_var  
-        
-        # backward時に使用する中間データ
-        self.batch_size = None
-        self.xc = None
-        self.std = None
-        self.dgamma = None
-        self.dbeta = None
-
     def forward(self, Z_prev, train_flg=True):
         # 画像(2次元以上)を1次元配列に変換 (バッチデータも含めて2次元に変換)
         Z_prev_flatten = flatten(Z_prev)
