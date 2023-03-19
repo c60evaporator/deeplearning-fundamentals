@@ -1,13 +1,14 @@
 import numpy as np
+from typing import Dict, List, Tuple
 from sklearn.preprocessing import OneHotEncoder
 from common.loss_funcions import cross_entropy_error, squared_error
 from common.optimizers import SGD, Momentum, AdaGrad, RMSprop, Adam, AdamW
 
 class ConvolutionNet:
-    def __init__(self, layers, 
-                 batch_size, n_iter,
-                 loss_type,
-                 learning_rate, 
+    def __init__(self, layers: List, 
+                 batch_size: int, n_iter: int,
+                 loss_type: str,
+                 learning_rate: float,
                  solver='sgd', momentum=0.9,
                  beta_1=0.9, beta_2=0.999, epsilon=1e-8,
                  weight_decay_lambda=None,
@@ -127,14 +128,38 @@ class ConvolutionNet:
     def predict(self, X):
         """
         順伝播を全て計算(クラス名で出力)
+
+        Parameters
+        ----------
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        
+        Returns
+        -------
+        np.ndarray
+            予測されたクラスラベルの1D numpy配列
         """
         Y = self._predict_onehot(X)
         Y = self._one_hot_encoding_reverse(Y)
         return Y
 
-    def select_minibatch(self, X, T):
+    def select_minibatch(self, X: np.ndarray, T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         ステップ1: ミニバッチの取得
+
+        Parameters
+        ----------
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T : np.ndarray
+            ターゲットラベルとなる2D numpy配列（形状:(n_samples, n_classes)）
+
+        Returns
+        -------
+        X_batch : np.ndarray
+            ランダムに選択されたミニバッチの入力データ（形状：(batch_size, n_features)）
+        T_batch : np.ndarray
+            ランダムに選択されたミニバッチの教師データ（形状：(batch_size, n_classes)）
         """
         train_size = X.shape[0]  # サンプリング前のデータ数
         batch_mask = np.random.choice(train_size, self.batch_size)  # ランダムサンプリング
@@ -161,9 +186,21 @@ class ConvolutionNet:
         # 元の損失関数 + Weight decayを返す
         return loss + weight_decay
 
-    def gradient_backpropagation(self, X, T):
+    def gradient_backpropagation(self, X: np.ndarray, T: np.ndarray) -> List[Dict[str, np.ndarray]]:
         """
         ステップ2: 誤差逆伝播法で全パラメータの勾配を計算
+
+        Parameters
+        ----------
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T : np.ndarray
+            ターゲットラベルとなる2D numpy配列（形状:(n_samples, n_classes)）
+
+        Returns
+        -------
+        grads : List[Dict[str, np.ndarray]]
+            計算された各層の勾配をリストとして保持 (パラメータ名をキーとした辞書のリスト)
         """
         # 順伝播 (中間層出力Zおよび中間層の中間結果Aも保持する)
         Y = self._predict_onehot(X, train_flg=True)
@@ -202,24 +239,29 @@ class ConvolutionNet:
             # 最適化で使用する変数の初期化
             self.optimizers[l].initialize_opt_params(layer.params)
 
-    def update_parameters(self, i_iter):
+    def update_parameters(self, i_iter: int):
         """
         ステップ3: パラメータの更新
+
+        Parameters
+        ----------
+        i_iter : int
+            現在の学習イテレーション(繰り返し)数
         """
         # 層ごとに最適化アルゴリズムによるパラメータ更新を実施
         for l, layer in enumerate(self.layers):
             self.optimizers[l].update(layer.params, layer.grads, i_iter)
 
-    def fit(self, X, T):
+    def fit(self, X: np.ndarray, T: np.ndarray):
         """
         ステップ4: ステップ1-3を繰り返す
 
         Parameters
         ----------
-        X : numpy.ndarray 2D
-            入力データ
-        T : numpy.ndarray 1D or 2D
-            正解データ
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T : np.ndarray
+            ターゲットラベルとなる1D or 2D numpy配列（1次元ベクトルの場合One-hot encodingで自動変換される）
         """
         # パラメータを初期化
         self._initialize_parameters()
@@ -241,9 +283,21 @@ class ConvolutionNet:
             if i_iter%10 == 0:
                 print(f'Iteration{i_iter}/{self.n_iter}')
         
-    def accuracy(self, X_test, T_test):
+    def accuracy(self, X_test, T_test) -> float:
         """
         正解率Accuracyを計算
+
+        Parameters
+        ----------
+        X_test : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T_test : np.ndarray
+            ターゲットラベルとなる1D or 2D numpy配列（1次元ベクトルの場合One-hot encodingで自動変換される）
+
+        Returns
+        -------
+        float
+            正解率 (Accuracy)
         """
         # Tが1次元ベクトルなら2次元に変換してOne-hot encodingする
         T_test = self._one_hot_encoding(T_test)

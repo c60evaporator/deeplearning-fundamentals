@@ -1,15 +1,16 @@
 import numpy as np
+from typing import Dict, List, Tuple
 from sklearn.preprocessing import OneHotEncoder
 from common.loss_funcions import cross_entropy_error, squared_error
 from common.forward_functions import forward_middle, forward_last_classification
 from common.backward_functions import softmax_loss_backward, affine_backward_bias, affine_backward_weight, affine_backward_zprev, relu_backward, sigmoid_backward
 
 class BackpropNeuralNet:
-    def __init__(self, X, T, 
-                 hidden_size, n_layers,
-                 batch_size, n_iter,
-                 loss_type, activation_function,
-                 learning_rate,
+    def __init__(self, X: np.ndarray, T: np.ndarray, 
+                 hidden_size: int, n_layers: int,
+                 batch_size: int, n_iter: int,
+                 loss_type: str, activation_function: str,
+                 learning_rate: float,
                  weight_init_std=0.01):
         """
         ハイパーパラメータの読込＆パラメータの初期化
@@ -125,17 +126,41 @@ class BackpropNeuralNet:
         else:
             return Z_result
     
-    def predict(self, X):
+    def predict(self, X: np.ndarray) -> np.ndarray:
         """
         順伝播を全て計算(クラス名で出力)
+
+        Parameters
+        ----------
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        
+        Returns
+        -------
+        np.ndarray
+            予測されたクラスラベルの1D numpy配列
         """
         Y = self._predict_onehot(X)
         Y = self._one_hot_encoding_reverse(Y)
         return Y
 
-    def select_minibatch(self, X, T):
+    def select_minibatch(self, X: np.ndarray, T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         ステップ1: ミニバッチの取得
+
+        Parameters
+        ----------
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T : np.ndarray
+            ターゲットラベルとなる2D numpy配列（形状:(n_samples, n_classes)）
+
+        Returns
+        -------
+        X_batch : np.ndarray
+            ランダムに選択されたミニバッチの入力データ（形状：(batch_size, n_features)）
+        T_batch : np.ndarray
+            ランダムに選択されたミニバッチの教師データ（形状：(batch_size, n_classes)）
         """
         train_size = X.shape[0]  # サンプリング前のデータ数
         batch_mask = np.random.choice(train_size, self.batch_size)  # ランダムサンプリング
@@ -155,9 +180,21 @@ class BackpropNeuralNet:
         else:
             raise Exception('The `loss_type` argument should be "cross_entropy" or "squared_error"')
 
-    def gradient_backpropagation(self, X, T):
+    def gradient_backpropagation(self, X: np.ndarray, T: np.ndarray) -> List[Dict[str, np.ndarray]]:
         """
         ステップ2: 誤差逆伝播法で全パラメータの勾配を計算
+
+        Parameters
+        ----------
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T : np.ndarray
+            ターゲットラベルとなる2D numpy配列（形状:(n_samples, n_classes)）
+
+        Returns
+        -------
+        grads : List[Dict[str, np.ndarray]]
+            計算された各層の勾配をリストとして保持 (パラメータ名をキーとした辞書のリスト)
         """
         # 順伝播 (中間層出力Zおよび中間層の中間結果Aも保持する)
         Y, Z_intermediate, A_intermediate = self._predict_onehot(X, train_flg=True)
@@ -198,25 +235,30 @@ class BackpropNeuralNet:
 
         return grads
 
-    def update_parameters(self, grads):
+    def update_parameters(self, grads: List[Dict[str, np.ndarray]]):
         """
         ステップ3: パラメータの更新
+
+        Parameters
+        ----------
+        grads : List[Dict[str, np.ndarray]]
+            各層の勾配を保持したリスト (パラメータ名をキーとした辞書のリスト)
         """
         # パラメータの更新
         for l in range(self.n_layers):
             self.params[l]['W'] -= self.learning_rate * grads[l]['W']
             self.params[l]['b'] -= self.learning_rate * grads[l]['b']
     
-    def fit(self, X, T):
+    def fit(self, X: np.ndarray, T: np.ndarray):
         """
         ステップ4: ステップ1-3を繰り返す
 
         Parameters
         ----------
-        X : numpy.ndarray 2D
-            入力データ
-        T : numpy.ndarray 1D or 2D
-            正解データ
+        X : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T : np.ndarray
+            ターゲットラベルとなる1D or 2D numpy配列（1次元ベクトルの場合One-hot encodingで自動変換される）
         """
         # パラメータを初期化
         self._initialize_parameters()
@@ -235,9 +277,21 @@ class BackpropNeuralNet:
             loss = self._loss(X_batch, T_batch)
             self.train_loss_list.append(loss)
         
-    def accuracy(self, X_test, T_test):
+    def accuracy(self, X_test: np.ndarray, T_test: np.ndarray) -> float:
         """
         正解率Accuracyを計算
+
+        Parameters
+        ----------
+        X_test : np.ndarray
+            入力データとなる2D numpy配列（形状:(n_samples, n_features)）
+        T_test : np.ndarray
+            ターゲットラベルとなる1D or 2D numpy配列（1次元ベクトルの場合One-hot encodingで自動変換される）
+
+        Returns
+        -------
+        float
+            正解率 (Accuracy)
         """
         # Tが1次元ベクトルなら2次元に変換してOne-hot encodingする
         T_test = self._one_hot_encoding(T_test)
