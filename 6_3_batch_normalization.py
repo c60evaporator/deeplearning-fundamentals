@@ -36,7 +36,7 @@ for activation_function in ['sigmoid', 'relu']:
             # Affineレイヤ
             a = np.dot(x, w)
             # Batch Normalization
-            a,_ ,_ ,_ ,_ = forward_batch_normalization(a, gamma=1, beta=0, epsilon=1e-6, output_intermediate=False)
+            a,_ ,_ ,_ ,_ = forward_batch_normalization(a, gamma=1, beta=0, epsilon=1e-6)
             # 活性化関数(Sigmoid)
             if activation_function == 'sigmoid':
                 z = sigmoid(a)

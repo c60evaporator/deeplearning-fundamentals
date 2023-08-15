@@ -268,20 +268,20 @@ class BackpropAdvancedNet:
     
     def _initialize_opt_params(self):
         """最適化で利用する変数の初期化"""
-        # モーメンタムの勾配移動平均保持用変数momentum_v (最適化アルゴリズムがモーメンタム or Adamの時使用)
+        # モーメンタムの勾配移動平均保持用変数ms (最適化アルゴリズムがモーメンタム or Adamの時使用)
         if self.solver in ['momentum', 'adam']:
-            self.momentum_v = [{} for l in range(self.n_layers)]  # 変数格納用の空の辞書のリスト
+            self.ms = [{} for l in range(self.n_layers)]  # 変数格納用の空の辞書のリスト
             for l in range(self.n_layers):  # 層ごとに初期化
                 # self.paramsと同形状のndarrayのリストとして初期化 (全てゼロ埋め)
-                self.momentum_v[l]['W'] = np.zeros_like(self.params[l]['W'])
-                self.momentum_v[l]['b'] = np.zeros_like(self.params[l]['b'])
-        # 過去の勾配2乗和保持用変数adagrad_h  (最適化アルゴリズムがAdaGrad, RMSProp, or Adamの時使用)
+                self.ms[l]['W'] = np.zeros_like(self.params[l]['W'])
+                self.ms[l]['b'] = np.zeros_like(self.params[l]['b'])
+        # 過去の勾配2乗和保持用変数vs  (最適化アルゴリズムがAdaGrad, RMSProp, or Adamの時使用)
         if self.solver in ['adagrad', 'rmsprop', 'adam']:
-            self.adagrad_h =[{} for l in range(self.n_layers)]  # 変数格納用の空の辞書のリスト
+            self.vs =[{} for l in range(self.n_layers)]  # 変数格納用の空の辞書のリスト
             for l in range(self.n_layers):  # 層ごとに初期化
                 # self.paramsと同形状のndarrayのリストとして初期化 (全てゼロ埋め)
-                self.adagrad_h[l]['W'] = np.zeros_like(self.params[l]['W'])
-                self.adagrad_h[l]['b'] = np.zeros_like(self.params[l]['b'])
+                self.vs[l]['W'] = np.zeros_like(self.params[l]['W'])
+                self.vs[l]['b'] = np.zeros_like(self.params[l]['b'])
 
     def _update_parameters_sgd(self, grads):
         """SGDによるパラメータ更新"""
@@ -293,45 +293,45 @@ class BackpropAdvancedNet:
     def _update_parameters_momentum(self, grads):
         """モーメンタムによるパラメータ更新"""
         for l in range(self.n_layers):
-            # 勾配移動平均momentum_v = momentum * 更新前のmomentum_v - 学習率learning_rate * 勾配grads
-            self.momentum_v[l]['W'] = self.momentum * self.momentum_v[l]['W'] - self.learning_rate * grads[l]['W']
-            self.momentum_v[l]['b'] = self.momentum * self.momentum_v[l]['b'] - self.learning_rate * grads[l]['b']
-            # パラメータ更新量 = momentum_v
-            self.params[l]['W'] += self.momentum_v[l]['W']
-            self.params[l]['b'] += self.momentum_v[l]['b']
+            # 勾配移動平均ms = momentum * 更新前のms - 学習率learning_rate * 勾配grads
+            self.ms[l]['W'] = self.momentum * self.ms[l]['W'] - self.learning_rate * grads[l]['W']
+            self.ms[l]['b'] = self.momentum * self.ms[l]['b'] - self.learning_rate * grads[l]['b']
+            # パラメータ更新量 = ms
+            self.params[l]['W'] += self.ms[l]['W']
+            self.params[l]['b'] += self.ms[l]['b']
 
     def _update_parameters_adagrad(self, grads):
         """AdaGradによるパラメータ更新"""
         for l in range(self.n_layers):
-            # 過去の勾配2乗和adagrad_h = 更新前のadagrad_h + 勾配gradsの2乗
-            self.adagrad_h[l]['W'] = self.adagrad_h[l]['W'] + grads[l]['W'] ** 2
-            self.adagrad_h[l]['b'] = self.adagrad_h[l]['b'] + grads[l]['b'] ** 2
-            # パラメータ更新量 = -学習率learning_rate * 勾配grads / (sqrt(adagrad_h)+epsilon)
-            self.params[l]['W'] -= self.learning_rate * grads[l]['W'] / (np.sqrt(self.adagrad_h[l]['W']) + self.epsilon)
-            self.params[l]['b'] -= self.learning_rate * grads[l]['b'] / (np.sqrt(self.adagrad_h[l]['b']) + self.epsilon)
+            # 過去の勾配2乗和vs = 更新前のvs + 勾配gradsの2乗
+            self.vs[l]['W'] = self.vs[l]['W'] + grads[l]['W'] ** 2
+            self.vs[l]['b'] = self.vs[l]['b'] + grads[l]['b'] ** 2
+            # パラメータ更新量 = -学習率learning_rate * 勾配grads / (sqrt(vs)+epsilon)
+            self.params[l]['W'] -= self.learning_rate * grads[l]['W'] / (np.sqrt(self.vs[l]['W']) + self.epsilon)
+            self.params[l]['b'] -= self.learning_rate * grads[l]['b'] / (np.sqrt(self.vs[l]['b']) + self.epsilon)
 
     def _update_parameters_rmsprop(self, grads):
         """RMSpropによるパラメータ更新"""
         for l in range(self.n_layers):
-            # 過去の勾配2乗和adagrad_h = beta_2 * 更新前のadagrad_h + (1 - beta_2) * 勾配gradsの2乗
-            self.adagrad_h[l]['W'] = self.beta_2 * self.adagrad_h[l]['W'] + (1 - self.beta_2) * grads[l]['W'] ** 2
-            self.adagrad_h[l]['b'] = self.beta_2 * self.adagrad_h[l]['b'] + (1 - self.beta_2) * grads[l]['b'] ** 2
-            # パラメータ更新量 = 学習率learning_rate * 勾配grads / (sqrt(adagrad_h)+epsilon)
-            self.params[l]['W'] -= self.learning_rate * grads[l]['W'] / (np.sqrt(self.adagrad_h[l]['W']) + self.epsilon)
-            self.params[l]['b'] -= self.learning_rate * grads[l]['b'] / (np.sqrt(self.adagrad_h[l]['b']) + self.epsilon)
+            # 過去の勾配2乗和vs = beta_2 * 更新前のvs + (1 - beta_2) * 勾配gradsの2乗
+            self.vs[l]['W'] = self.beta_2 * self.vs[l]['W'] + (1 - self.beta_2) * grads[l]['W'] ** 2
+            self.vs[l]['b'] = self.beta_2 * self.vs[l]['b'] + (1 - self.beta_2) * grads[l]['b'] ** 2
+            # パラメータ更新量 = 学習率learning_rate * 勾配grads / (sqrt(vs)+epsilon)
+            self.params[l]['W'] -= self.learning_rate * grads[l]['W'] / (np.sqrt(self.vs[l]['W']) + self.epsilon)
+            self.params[l]['b'] -= self.learning_rate * grads[l]['b'] / (np.sqrt(self.vs[l]['b']) + self.epsilon)
 
     def _update_parameters_adam(self, grads):
         """Adamによるパラメータ更新"""
         for l in range(self.n_layers):
-            # 勾配移動平均momentum_v = beta_1 * 更新前のmomentum_v - (1 - beta_1) * 勾配grads
-            self.momentum_v[l]['W'] = self.beta_1 * self.momentum_v[l]['W'] + (1 - self.beta_1) * grads[l]['W']
-            self.momentum_v[l]['b'] = self.beta_1 * self.momentum_v[l]['b'] + (1 - self.beta_1) * grads[l]['b']
-            # 過去の勾配2乗和adagrad_h = beta_2 * 更新前のadagrad_h + (1 - beta_2) * 勾配gradsの2乗
-            self.adagrad_h[l]['W'] = self.beta_2 * self.adagrad_h[l]['W'] + (1 - self.beta_2) * grads[l]['W'] ** 2
-            self.adagrad_h[l]['b'] = self.beta_2 * self.adagrad_h[l]['b'] + (1 - self.beta_2) * grads[l]['b'] ** 2
-            # パラメータ更新量 = 学習率learning_rate * momentum_v / (sqrt(adagrad_h)+epsilon)
-            self.params[l]['W'] -= self.learning_rate * self.momentum_v[l]['W'] / (np.sqrt(self.adagrad_h[l]['W']) + self.epsilon)
-            self.params[l]['b'] -= self.learning_rate * self.momentum_v[l]['b'] / (np.sqrt(self.adagrad_h[l]['b']) + self.epsilon)
+            # 勾配移動平均ms = beta_1 * 更新前のms - (1 - beta_1) * 勾配grads
+            self.ms[l]['W'] = self.beta_1 * self.ms[l]['W'] + (1 - self.beta_1) * grads[l]['W']
+            self.ms[l]['b'] = self.beta_1 * self.ms[l]['b'] + (1 - self.beta_1) * grads[l]['b']
+            # 過去の勾配2乗和vs = beta_2 * 更新前のvs + (1 - beta_2) * 勾配gradsの2乗
+            self.vs[l]['W'] = self.beta_2 * self.vs[l]['W'] + (1 - self.beta_2) * grads[l]['W'] ** 2
+            self.vs[l]['b'] = self.beta_2 * self.vs[l]['b'] + (1 - self.beta_2) * grads[l]['b'] ** 2
+            # パラメータ更新量 = 学習率learning_rate * ms / (sqrt(vs)+epsilon)
+            self.params[l]['W'] -= self.learning_rate * self.ms[l]['W'] / (np.sqrt(self.vs[l]['W']) + self.epsilon)
+            self.params[l]['b'] -= self.learning_rate * self.ms[l]['b'] / (np.sqrt(self.vs[l]['b']) + self.epsilon)
     
     def update_parameters(self, grads: List[Dict[str, np.ndarray]]):
         """
