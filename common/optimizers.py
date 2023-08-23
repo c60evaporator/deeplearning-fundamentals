@@ -19,7 +19,8 @@ class BaseOptimizer(metaclass=ABCMeta):
 
 class SGD(BaseOptimizer):
     """SGDによる最適化クラス"""
-    def __init__(self, learning_rate=0.01):
+    def __init__(self, learning_rate=0.01,
+                 weight_decay=0):
         """
         クラスの初期化
 
@@ -27,16 +28,11 @@ class SGD(BaseOptimizer):
         ----------
         learning_rate : float
             学習率
-        momentum : float
-            勾配移動平均の減衰率ハイパーパラメータ (solver = 'momentum'の時のみ有効)
-        beta_1 : float
-            勾配移動平均の減衰率ハイパーパラメータ (solver = 'adam' or 'adamw'の時のみ有効)
-        beta_2 : float
-            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop', 'adam', or 'adamw'の時のみ有効)
-        epsilon : float
-            ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', 'adam', or 'adamw'の時のみ有効)
+        weight_decay : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
         """
         self.learning_rate = learning_rate
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
     
     def initialize_opt_params(self, params):
         """最適化で使用する変数の初期化"""
@@ -49,7 +45,8 @@ class SGD(BaseOptimizer):
 
 class Momentum(BaseOptimizer):
     """モーメンタムによる最適化クラス"""
-    def __init__(self, learning_rate=0.1, momentum=0.9):
+    def __init__(self, learning_rate=0.1, momentum=0.9,
+                 weight_decay=0):
         """
         クラスの初期化
 
@@ -59,9 +56,12 @@ class Momentum(BaseOptimizer):
             学習率
         momentum : float
             勾配移動平均の減衰率ハイパーパラメータ
+        weight_decay : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
         """
         self.learning_rate = learning_rate
         self.momentum = momentum
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
     
     def initialize_opt_params(self, params):
         """最適化で使用する変数の初期化"""
@@ -77,7 +77,8 @@ class Momentum(BaseOptimizer):
 
 class AdaGrad(BaseOptimizer):
     """AdaGradによる最適化クラス"""
-    def __init__(self, learning_rate=0.001, epsilon=1e-7):
+    def __init__(self, learning_rate=0.001, epsilon=1e-7,
+                 weight_decay=0):
         """
         クラスの初期化
 
@@ -87,9 +88,12 @@ class AdaGrad(BaseOptimizer):
             学習率
         epsilon : float
             ゼロ除算によるエラーを防ぐハイパーパラメータ
+        weight_decay : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
         """
         self.learning_rate = learning_rate
         self.epsilon = epsilon
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
     
     def initialize_opt_params(self, params):
         """最適化で使用する変数の初期化"""
@@ -105,7 +109,8 @@ class AdaGrad(BaseOptimizer):
 
 class RMSprop(BaseOptimizer):
     """RMSpropによる最適化クラス"""
-    def __init__(self, learning_rate=0.01, beta_2=0.99, epsilon=1e-8):
+    def __init__(self, learning_rate=0.01, beta_2=0.99, epsilon=1e-8,
+                 weight_decay=0):
         """
         クラスの初期化
 
@@ -117,10 +122,13 @@ class RMSprop(BaseOptimizer):
             過去の勾配2乗和の減衰率ハイパーパラメータ
         epsilon : float
             ゼロ除算によるエラーを防ぐハイパーパラメータ
+        weight_decay : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
         """
         self.learning_rate = learning_rate
         self.beta_2 = beta_2
         self.epsilon = epsilon
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
     
     def initialize_opt_params(self, params):
         """最適化で使用する変数の初期化"""
@@ -136,8 +144,9 @@ class RMSprop(BaseOptimizer):
 
 class Adam(BaseOptimizer):
     """Adamによる最適化クラス"""
-    def __init__(self, learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-7, 
-                 bias_correction=False, bias_max_iter=5000):
+    def __init__(self, learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-7,
+                 bias_correction=False, bias_max_iter=5000,
+                 weight_decay=0):
         """
         クラスの初期化
 
@@ -155,6 +164,8 @@ class Adam(BaseOptimizer):
             バイアス補正の有無
         bias_max_iter : int
             バイアス補正を打ち切るイテレーション数
+        weight_decay : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
         """
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
@@ -162,6 +173,7 @@ class Adam(BaseOptimizer):
         self.epsilon = epsilon
         self.bias_correction = bias_correction  # バイアス補正の有無
         self.bias_max_iter = bias_max_iter  # バイアス補正を打ち切るイテレーション数
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
     
     def initialize_opt_params(self, params):
         """最適化で使用する変数の初期化"""

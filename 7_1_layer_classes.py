@@ -29,11 +29,11 @@ weight_decay=0.000001  # Weight decayの正則化効果の強さを表すハイ�
 
 # 最適化用クラスを作成
 optimizers = {
-    'sgd': SGD(learning_rate=1.0),
-    'momentum': Momentum(learning_rate=0.5, momentum=0.5),
-    'adagrad': AdaGrad(learning_rate=0.1, epsilon=1e-8),
-    'rmsprop': RMSprop(learning_rate=0.01, beta_2=0.999, epsilon=1e-8),
-    'adam': Adam(learning_rate=0.01, beta_1=0.5, beta_2=0.999, epsilon=1e-8, bias_correction=False),
+    'sgd': SGD(learning_rate=1.0, weight_decay=0.000001),
+    'momentum': Momentum(learning_rate=0.5, momentum=0.5, weight_decay=0.000001),
+    'adagrad': AdaGrad(learning_rate=0.1, epsilon=1e-8, weight_decay=0.000001),
+    'rmsprop': RMSprop(learning_rate=0.01, beta_2=0.999, epsilon=1e-8, weight_decay=0.000001),
+    'adam': Adam(learning_rate=0.01, beta_1=0.5, beta_2=0.999, epsilon=1e-8, bias_correction=False, weight_decay=0.000001),
     'adamw': AdamW(learning_rate=0.01, beta_1=0.5, beta_2=0.999, epsilon=1e-8, bias_correction=False, weight_decay=0.000001)
 }
 
@@ -51,8 +51,7 @@ for optname, optimizer in optimizers.items():
     network = ConvolutionNet(layers=layers,
                         batch_size=batch_size, n_iter=n_iter,
                         loss_type='cross_entropy',
-                        optimizer=optimizer,
-                        weight_decay=weight_decay
+                        optimizer=optimizer
                         )
     start = time.time()  # 時間計測用
     # SGDによる学習
