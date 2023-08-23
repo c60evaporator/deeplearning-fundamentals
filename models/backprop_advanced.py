@@ -13,7 +13,7 @@ class BackpropAdvancedNet:
                  loss_type: str, activation_function: str,
                  learning_rate: float, solver='sgd', momentum=0.9,
                  beta_1=0.9, beta_2=0.999, epsilon=1e-8,
-                 weight_decay_lambda=0,
+                 weight_decay=0,
                  weight_init_std='auto'):
         """
         ハイパーパラメータの読込＆パラメータの初期化
@@ -48,7 +48,7 @@ class BackpropAdvancedNet:
             過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop' or 'adam'の時のみ有効)
         epsilon : float
             ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', or 'adam'の時のみ有効)
-        weight_decay_lambda : float
+        weight_decay : float
             Weight decayの正則化効果の強さを表すハイパーパラメータ
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
@@ -68,7 +68,7 @@ class BackpropAdvancedNet:
         self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)
         self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
         self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
-        self.weight_decay_lambda = weight_decay_lambda  # Weight decayの正則化効果の強さを表すハイパーパラメータ
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
         self.weight_init_std = weight_init_std  # 重み初期値生成時の標準偏差
         # 損失関数と活性化関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
@@ -205,7 +205,7 @@ class BackpropAdvancedNet:
         # Weight decayの計算
         weight_decay = 0
         for l in range(self.n_layers):
-            weight_decay += 0.5 * self.weight_decay_lambda * np.sum(self.params[l]['W'] ** 2)
+            weight_decay += 0.5 * self.weight_decay * np.sum(self.params[l]['W'] ** 2)
         # 元の損失関数 + Weight decayを返す
         return loss + weight_decay
 
@@ -239,7 +239,7 @@ class BackpropAdvancedNet:
         # 計算した偏微分(勾配)を保持
         grads[self.n_layers-1]['b'] = db
         grads[self.n_layers-1]['W'] = dW \
-            + self.weight_decay_lambda * self.params[self.n_layers-1]['W']  # Weight decay分を勾配に足す
+            + self.weight_decay * self.params[self.n_layers-1]['W']  # Weight decay分を勾配に足す
         ###### 中間層の逆伝播 (下流から順番にループ) ######
         for l in range(self.n_layers-2, -1, -1):
             # 当該層の出力偏微分dZを更新
@@ -262,7 +262,7 @@ class BackpropAdvancedNet:
             # 計算した偏微分(勾配)を保持
             grads[l]['b'] = db
             grads[l]['W'] = dW \
-                + self.weight_decay_lambda * self.params[l]['W']  # Weight decay分を勾配に足す
+                + self.weight_decay * self.params[l]['W']  # Weight decay分を勾配に足す
 
         return grads
     

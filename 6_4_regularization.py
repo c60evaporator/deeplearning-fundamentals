@@ -28,7 +28,7 @@ momentum = {'sgd': None, 'momentum': 0.5, 'adagrad': None, 'rmsprop': None, 'ada
 beta_1 = {'sgd': None, 'momentum': None, 'adagrad': None, 'rmsprop': None, 'adam': 0.5}# 勾配移動平均の減衰率ハイパーパラメータ(Adam)
 beta_2 = {'sgd': None, 'momentum': None, 'adagrad': None, 'rmsprop': 0.999, 'adam': 0.999}# 勾配2乗和の減衰率ハイパーパラメータ(RMSprop, Adam)
 epsilon = {'sgd': None, 'momentum': None, 'adagrad': 1e-8, 'rmsprop': 1e-8, 'adam': 1e-8}# ゼロ除算によるエラーを防ぐハイパーパラメータ(AdaGrad, RMSprop, Adam)
-weight_decay_lambda=0.000001  # Weight decayの正則化効果の強さを表すハイパーパラメータ
+weight_decay=0.000001  # Weight decayの正則化効果の強さを表すハイパーパラメータ
 
 # 最適化手法を変えてプロット
 for algo in ['sgd', 'momentum' ,'adagrad', 'rmsprop', 'adam']:
@@ -44,7 +44,7 @@ for algo in ['sgd', 'momentum' ,'adagrad', 'rmsprop', 'adam']:
                         beta_1=beta_1[algo],
                         beta_2=beta_2[algo],
                         epsilon=epsilon[algo],
-                        weight_decay_lambda=weight_decay_lambda
+                        weight_decay=weight_decay
                         )
     start = time.time()  # 時間計測用
     # SGDによる学習
@@ -56,3 +56,4 @@ for algo in ['sgd', 'momentum' ,'adagrad', 'rmsprop', 'adam']:
     plt.plot(range(n_iter), network.train_loss_list)
     plt.title(algo)
     plt.show()
+# %%

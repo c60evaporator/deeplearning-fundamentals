@@ -1,18 +1,17 @@
 import numpy as np
 from typing import Dict, List, Tuple
 from sklearn.preprocessing import OneHotEncoder
+import copy
+
 from common.loss_funcions import cross_entropy_error, squared_error
-from common.optimizers import SGD, Momentum, AdaGrad, RMSprop, Adam, AdamW
+from common.optimizers import BaseOptimizer, SGD, Momentum, AdaGrad, RMSprop, Adam, AdamW
 
 class ConvolutionNet:
     def __init__(self, layers: List, 
                  batch_size: int, n_iter: int,
                  loss_type: str,
-                 learning_rate: float,
-                 solver='sgd', momentum=0.9,
-                 beta_1=0.9, beta_2=0.999, epsilon=1e-8,
-                 weight_decay_lambda=None,
-                 bias_correction=False):
+                 optimizer='adam',
+                 weight_decay=0):
         """
         ハイパーパラメータの読込＆パラメータの初期化
 
@@ -26,36 +25,18 @@ class ConvolutionNet:
             学習 (SGD)の繰り返し数
         loss_type : {'cross_entropy', 'squared_error'}
             損失関数の種類 ('cross_entropy': 交差エントロピー誤差, 'squared_error': 2乗和誤差)
-        learning_rate : float
-            学習率
-        solver : {'sgd', 'momentum', 'adagrad', 'rmsprop', 'adam', 'adamw'}
+        optimizer : {common.optimizers.BaseOptimizer, 'sgd', 'momentum', 'adagrad', 'rmsprop', 'adam', 'adamw'}
             最適化アルゴリズムの種類 ('sgd': SGD, 'momentum': モーメンタム, 'adagrad': AdaGrad, 'rmsprop': 'RMSProp', 'adam': Adam, 'adamw': AdamW)
-        momentum : float
-            勾配移動平均の減衰率ハイパーパラメータ (solver = 'momentum'の時のみ有効)
-        beta_1 : float
-            勾配移動平均の減衰率ハイパーパラメータ (solver = 'adam' or 'adamw'の時のみ有効)
-        beta_2 : float
-            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop', 'adam', or 'adamw'の時のみ有効)
-        epsilon : float
-            ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', 'adam', or 'adamw'の時のみ有効)
-        weight_decay_lambda : float
-            Weight decayの正則化効果の強さを表すハイパーパラメータ
-        bias_correction : bool
-            Adamでバイアス補正を実施するか (solver = 'adam' or 'adamw'の時のみ有効)
+        weight_decay : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ（最適化アルゴリズムがAdamWのときは適用されない）
         """
         # 各種メンバ変数 (ハイパーパラメータ等)の入力
         self.layers = layers  # ネットワーク構造 (各層のクラスをリスト化したもの)
-        self.learning_rate = learning_rate  # 学習率
         self.batch_size = batch_size  # ミニバッチのデータ数
         self.n_iter = n_iter  # 学習のイテレーション(繰り返し)数
         self.loss_type = loss_type  # 損失関数の種類
-        self.solver = solver  # 最適化アルゴリズムの種類
-        self.momentum = momentum  # 勾配移動平均の減衰率ハイパーパラメータ (モーメンタムで使用)
-        self.beta_1 = beta_1  # 勾配移動平均の減衰率ハイパーパラメータ (Adamで使用)
-        self.beta_2 = beta_2  # 過去の勾配2乗和の減衰率ハイパーパラメータ (RMSProp, Adamで使用)
-        self.epsilon = epsilon  # ゼロ除算によるエラーを防ぐためのハイパーパラメータ (AdaGrad, RMSProp, Adamで使用)
-        self.weight_decay_lambda = weight_decay_lambda  # Weight decayの正則化効果の強さを表すハイパーパラメータ
-        self.bias_correction = bias_correction  # Adamでバイアス補正を実施するか (Adamで使用)
+        self.optimizer = optimizer  # 最適化アルゴリズムの種類
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
 
         # 損失関数が正しく入力されているか判定
         if loss_type not in ['cross_entropy', 'squared_error']:
@@ -69,6 +50,10 @@ class ConvolutionNet:
         """
         パラメータ等を初期化
         """
+        # 最適化アルゴリズムがAdamWのとき、損失関数にWeight decayは適用しないようメンバ変数を修正する
+        if self.optimizer == 'adamw' or isinstance(self.optimizer, AdamW):
+            self.weight_decay = 0
+
         # 層ごとにパラメータ初期化
         for l, layer in enumerate(self.layers):
             # 初層のとき、クラス初期化時に指定したinput_shapeを入力サイズとして使用
@@ -78,14 +63,9 @@ class ConvolutionNet:
             else:
                 layer.initialize_parameters(input_shape=self.layers[l-1].output_shape)
 
-            # 全結合層かつ全体のWeight decay係数が入力されているとき、層ごとに係数を適用
-            if 'W' in layer.params and self.weight_decay_lambda is not None:
-                layer.weight_decay_lambda = self.weight_decay_lambda
-
-        # 最適化アルゴリズムがAdamWのとき、損失関数にWeight decayは適用しないようメンバ変数を修正する
-        if self.solver == 'adamw':
-            self.weight_decay_lambda_adamw = self.weight_decay_lambda
-            self.weight_decay_lambda = 0
+            # 全結合層のとき、層ごとにWeight decay係数係数を適用
+            if 'W' in layer.params:
+                layer.weight_decay = self.weight_decay
 
         # 最適化用クラスも初期化
         self._initialize_optimizers()
@@ -182,7 +162,7 @@ class ConvolutionNet:
         weight_decay = 0
         for l, layer in enumerate(self.layers):
             if 'W' in layer.params:
-                weight_decay += 0.5 * layer.weight_decay_lambda * np.sum(layer.params['W'] ** 2)
+                weight_decay += 0.5 * layer.weight_decay * np.sum(layer.params['W'] ** 2)
         # 元の損失関数 + Weight decayを返す
         return loss + weight_decay
 
@@ -214,27 +194,27 @@ class ConvolutionNet:
         """最適化で利用するクラスの初期化"""
         self.optimizers=[]  # 相互ごとの最適化用インスタンス保持用のリスト
         for l, layer in enumerate(self.layers):  # 層ごとに初期化
-            # 最適化アルゴリズムがSGDの時
-            if self.solver == 'sgd':
-                self.optimizers.append(SGD(self.learning_rate))
-            # 最適化アルゴリズムがモーメンタムの時
-            elif self.solver == 'momentum':
-                self.optimizers.append(Momentum(self.learning_rate, self.momentum))
-            # 最適化アルゴリズムがAdaGradの時
-            elif self.solver == 'adagrad':
-                self.optimizers.append(AdaGrad(self.learning_rate, self.epsilon))
-            # 最適化アルゴリズムがRMSpropの時
-            elif self.solver == 'rmsprop':
-                self.optimizers.append(RMSprop(self.learning_rate, self.beta_2, self.epsilon))
-            # 最適化アルゴリズムがAdamの時
-            elif self.solver == 'adam':
-                self.optimizers.append(Adam(self.learning_rate, self.beta_1, self.beta_2, self.epsilon, 
-                                            bias_correction=self.bias_correction))
-            # 最適化アルゴリズムがAdamWの時
-            elif self.solver == 'adamw':
-                self.optimizers.append(AdamW(self.learning_rate, self.beta_1, self.beta_2, self.epsilon, 
-                                             bias_correction=self.bias_correction, 
-                                             weight_decay_lambda=self.weight_decay_lambda_adamw))
+            # 最適化をクラスで指定したとき
+            if isinstance(self.optimizer, BaseOptimizer):
+                self.optimizers.append(copy.deepcopy(self.optimizer))
+            # 最適化を文字列で指定したとき (SGD)
+            if self.optimizer == 'sgd':
+                self.optimizers.append(SGD())
+            # 最適化を文字列で指定したとき (モーメンタム)
+            elif self.optimizer == 'momentum':
+                self.optimizers.append(Momentum())
+            # 最適化を文字列で指定したとき (AdaGrad)
+            elif self.optimizer == 'adagrad':
+                self.optimizers.append(AdaGrad())
+            # 最適化を文字列で指定したとき (RMSprop)
+            elif self.optimizer == 'rmsprop':
+                self.optimizers.append(RMSprop())
+            # 最適化を文字列で指定したとき (Adam)
+            elif self.optimizer == 'adam':
+                self.optimizers.append(Adam())
+            # 最適化を文字列で指定したとき (AdamW)
+            elif self.optimizer == 'adamw':
+                self.optimizers.append(AdamW())
             
             # 最適化で使用する変数の初期化
             self.optimizers[l].initialize_opt_params(layer.params)

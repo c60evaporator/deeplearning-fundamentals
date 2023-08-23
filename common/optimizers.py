@@ -1,9 +1,41 @@
 import numpy as np
+from abc import ABCMeta, abstractmethod
 
-class SGD:
-    """SGDによる最適化クラス"""
-    def __init__(self, learning_rate):
+class BaseOptimizer(metaclass=ABCMeta):
+    """最適化クラスの継承用インタフェース"""
+    def __init__(self):
         """クラスの初期化"""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def initialize_opt_params(self, params):
+        """最適化で使用する変数の初期化"""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def update(self, params, grads, i_iter):
+        """パラメータの更新"""
+        raise NotImplementedError()
+
+class SGD(BaseOptimizer):
+    """SGDによる最適化クラス"""
+    def __init__(self, learning_rate=0.01):
+        """
+        クラスの初期化
+
+        Parameters
+        ----------
+        learning_rate : float
+            学習率
+        momentum : float
+            勾配移動平均の減衰率ハイパーパラメータ (solver = 'momentum'の時のみ有効)
+        beta_1 : float
+            勾配移動平均の減衰率ハイパーパラメータ (solver = 'adam' or 'adamw'の時のみ有効)
+        beta_2 : float
+            過去の勾配2乗和の減衰率ハイパーパラメータ (solver = 'rmsprop', 'adam', or 'adamw'の時のみ有効)
+        epsilon : float
+            ゼロ除算によるエラーを防ぐハイパーパラメータ (solver = 'adagrad', 'rmsprop', 'adam', or 'adamw'の時のみ有効)
+        """
         self.learning_rate = learning_rate
     
     def initialize_opt_params(self, params):
@@ -15,10 +47,19 @@ class SGD:
         for k in params.keys():  # パラメータごとに更新
             params[k] -= self.learning_rate * grads[k]
 
-class Momentum:
+class Momentum(BaseOptimizer):
     """モーメンタムによる最適化クラス"""
-    def __init__(self, learning_rate, momentum):
-        """クラスの初期化"""
+    def __init__(self, learning_rate=0.1, momentum=0.9):
+        """
+        クラスの初期化
+
+        Parameters
+        ----------
+        learning_rate : float
+            学習率
+        momentum : float
+            勾配移動平均の減衰率ハイパーパラメータ
+        """
         self.learning_rate = learning_rate
         self.momentum = momentum
     
@@ -34,10 +75,19 @@ class Momentum:
             # パラメータ更新量 = ms
             params[k] += self.ms[k]
 
-class AdaGrad:
+class AdaGrad(BaseOptimizer):
     """AdaGradによる最適化クラス"""
-    def __init__(self, learning_rate, epsilon):
-        """クラスの初期化"""
+    def __init__(self, learning_rate=0.001, epsilon=1e-7):
+        """
+        クラスの初期化
+
+        Parameters
+        ----------
+        learning_rate : float
+            学習率
+        epsilon : float
+            ゼロ除算によるエラーを防ぐハイパーパラメータ
+        """
         self.learning_rate = learning_rate
         self.epsilon = epsilon
     
@@ -53,10 +103,21 @@ class AdaGrad:
             # パラメータ更新量 = -学習率learning_rate * 勾配grads / (sqrt(vs)+epsilon)
             params[k] -= self.learning_rate * grads[k] / (np.sqrt(self.vs[k]) + self.epsilon)
 
-class RMSprop:
+class RMSprop(BaseOptimizer):
     """RMSpropによる最適化クラス"""
-    def __init__(self, learning_rate, beta_2, epsilon):
-        """クラスの初期化"""
+    def __init__(self, learning_rate=0.01, beta_2=0.99, epsilon=1e-8):
+        """
+        クラスの初期化
+
+        Parameters
+        ----------
+        learning_rate : float
+            学習率
+        beta_2 : float
+            過去の勾配2乗和の減衰率ハイパーパラメータ
+        epsilon : float
+            ゼロ除算によるエラーを防ぐハイパーパラメータ
+        """
         self.learning_rate = learning_rate
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -73,11 +134,28 @@ class RMSprop:
             # パラメータ更新量 = 学習率learning_rate * 勾配grads / (sqrt(vs)+epsilon)
             params[k] -= self.learning_rate * grads[k] / (np.sqrt(self.vs[k]) + self.epsilon)
 
-class Adam:
+class Adam(BaseOptimizer):
     """Adamによる最適化クラス"""
-    def __init__(self, learning_rate, beta_1, beta_2, epsilon, 
+    def __init__(self, learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-7, 
                  bias_correction=False, bias_max_iter=5000):
-        """クラスの初期化"""
+        """
+        クラスの初期化
+
+        Parameters
+        ----------
+        learning_rate : float
+            学習率
+        beta_1 : float
+            勾配移動平均の減衰率ハイパーパラメータ
+        beta_2 : float
+            過去の勾配2乗和の減衰率ハイパーパラメータ
+        epsilon : float
+            ゼロ除算によるエラーを防ぐハイパーパラメータ
+        bias_correction : bool
+            バイアス補正の有無
+        bias_max_iter : int
+            バイアス補正を打ち切るイテレーション数
+        """
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
@@ -107,19 +185,38 @@ class Adam:
             # パラメータ更新量 = 学習率learning_rate * ms / (sqrt(vs)+epsilon)
             params[k] -= self.learning_rate * ms_hat / (np.sqrt(vs_hat) + self.epsilon)
 
-class AdamW:
+class AdamW(BaseOptimizer):
     """AdamWによる最適化クラス"""
-    def __init__(self, learning_rate, beta_1, beta_2, epsilon,
+    def __init__(self, learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-7, 
                  bias_correction=False, bias_max_iter=5000,
-                 weight_decay_lambda=0.0001):
-        """クラスの初期化"""
+                 weight_decay=0.004):
+        """
+        クラスの初期化
+
+        Parameters
+        ----------
+        learning_rate : float
+            学習率
+        beta_1 : float
+            勾配移動平均の減衰率ハイパーパラメータ
+        beta_2 : float
+            過去の勾配2乗和の減衰率ハイパーパラメータ
+        epsilon : float
+            ゼロ除算によるエラーを防ぐハイパーパラメータ
+        bias_correction : bool
+            バイアス補正の有無
+        bias_max_iter : int
+            バイアス補正を打ち切るイテレーション数
+        weight_decay : float
+            Weight decayの正則化効果の強さを表すハイパーパラメータ
+        """
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
         self.bias_correction = bias_correction  # バイアス補正の有無
         self.bias_max_iter = bias_max_iter  # バイアス補正を打ち切るイテレーション数
-        self.weight_decay_lambda = weight_decay_lambda  # Weight decayの正則化効果の強さを表すハイパーパラメータ
+        self.weight_decay = weight_decay  # Weight decayの正則化効果の強さを表すハイパーパラメータ
     
     def initialize_opt_params(self, params):
         """最適化で使用する変数の初期化"""
@@ -142,8 +239,8 @@ class AdamW:
                 vs_hat = self.vs[k]
             # パラメータ更新量 = 学習率learning_rate * ms / (sqrt(vs)+epsilon)
             update = self.learning_rate * ms_hat / (np.sqrt(vs_hat) + self.epsilon)
-            # 重みパラメータのみ、パラメータ更新量に正則化項 (lr * weight_decay_lambda * 更新前のパラメータ)を加算
+            # 重みパラメータのみ、パラメータ更新量に正則化項 (lr * weight_decay * 更新前のパラメータ)を加算
             if k == 'W':
-                update += self.learning_rate * self.weight_decay_lambda * params[k]
+                update += self.learning_rate * self.weight_decay * params[k]
             # パラメータ更新
             params[k] -= update

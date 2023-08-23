@@ -8,7 +8,7 @@ class Dense():
     中間層の全結合層 (Affineレイヤ+活性化関数レイヤ)
     """
     def __init__(self, units=32, activation_function='relu', 
-                 weight_decay_lambda=0, weight_init_std='auto',
+                 weight_decay=0, weight_init_std='auto',
                  input_shape=None):
         """
         層の初期化
@@ -19,7 +19,7 @@ class Dense():
             ニューロン数
         activation_function : {'sigmoid', 'relu'}
             中間層活性化関数の種類 ('sigmoid': シグモイド関数, 'relu': ReLU関数)
-        weight_decay_lambda : float
+        weight_decay : float
             Weight decayの正則化効果の強さを表すハイパーパラメータ
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
@@ -28,7 +28,7 @@ class Dense():
         """
         self.units = units
         self.activation_function = activation_function
-        self.weight_decay_lambda = weight_decay_lambda
+        self.weight_decay = weight_decay
         self.weight_init_std = weight_init_std
         self.input_shape = input_shape
 
@@ -74,7 +74,7 @@ class Dense():
         dZ_prev = affine_backward_zprev(dA, self.params['W'])  # 前層出力dZ_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
         self.grads['b'] = db
-        self.grads['W'] = dW + self.weight_decay_lambda * self.params['W']  # Weight decay分を勾配に足す
+        self.grads['W'] = dW + self.weight_decay * self.params['W']  # Weight decay分を勾配に足す
         # 前層出力の偏微分(勾配)dZ_prevを出力
         return dZ_prev
 
@@ -83,7 +83,7 @@ class DenseOutput(Dense):
     出力層の全結合層 (Affineレイヤ+活性化関数レイヤ)
     """
     def __init__(self, units=2, activation_function='softmax',
-                 weight_decay_lambda=0, weight_init_std='auto'):
+                 weight_decay=0, weight_init_std='auto'):
         """
         層の初期化
 
@@ -93,7 +93,7 @@ class DenseOutput(Dense):
             ニューロン数
         activation_function : {'softmax', 'identity'}
             出力層活性化関数の種類 ('softmax': ソフトマックス関数, 'identity': 恒等関数)
-        weight_decay_lambda : float
+        weight_decay : float
             Weight decayの正則化効果の強さを表すハイパーパラメータ
         weight_init_std : float or 'auto'
             重み初期値生成時の標準偏差 ('auto'を指定すると、activation_function='sigmoid'の時Xavierの初期値を、'relu'の時Heの初期値を使用)
@@ -120,6 +120,6 @@ class DenseOutput(Dense):
         dZ_prev = affine_backward_zprev(dA, self.params['W'])  # 前層出力dZ_prevの偏微分 (重みパラメータWを入力)
         # 計算した偏微分(勾配)を保持
         self.grads['b'] = db
-        self.grads['W'] = dW + self.weight_decay_lambda * self.params['W']  # Weight decay分を勾配に足す
+        self.grads['W'] = dW + self.weight_decay * self.params['W']  # Weight decay分を勾配に足す
         # 前層出力の偏微分(勾配)dZ_prevを出力
         return dZ_prev
