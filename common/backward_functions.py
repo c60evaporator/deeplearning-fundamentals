@@ -42,5 +42,5 @@ def sigmoid_backward(dZ, Z):
     """
     Sigmoidレイヤの逆伝播
     """
-    dA = Z * (1.0 - Z) * dZ  # 各成分の掛け合わせでdAを計算
+    dA = Z * (1.0 - Z) * dZ  # 各成分の掛け合わせ（アダマール積）でdAを計算
     return dA
