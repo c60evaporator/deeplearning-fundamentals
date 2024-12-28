@@ -1,4 +1,4 @@
-# fully-understand-deeplearning
+# deeplearning-fundamentals
 
-忙しい人のための「ゼロから作るDeep Learning」
+生成AI全盛の今、あえて基礎から学ぶDeep Learning
 
